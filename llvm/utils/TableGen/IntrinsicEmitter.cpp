@@ -253,7 +253,8 @@ enum IIT_Info {
   IIT_PPCF128 = 52,
   IIT_V3 = 53,
   IIT_EXTERNREF = 54,
-  IIT_FUNCREF = 55
+  IIT_FUNCREF = 55,
+  IIT_SCALABLE_MATRIX = 56
 };
 
 static void EncodeFixedValueType(MVT::SimpleValueType VT,
@@ -349,6 +350,7 @@ static void EncodeFixedType(Record *R, std::vector<unsigned char> &ArgCodes,
   switch (VT) {
   default: break;
   case MVT::iPTRAny: ++Tmp; LLVM_FALLTHROUGH;
+  case MVT::mAny: ++Tmp;    LLVM_FALLTHROUGH;
   case MVT::vAny: ++Tmp;    LLVM_FALLTHROUGH;
   case MVT::fAny: ++Tmp;    LLVM_FALLTHROUGH;
   case MVT::iAny: ++Tmp;    LLVM_FALLTHROUGH;
@@ -387,6 +389,8 @@ static void EncodeFixedType(Record *R, std::vector<unsigned char> &ArgCodes,
     MVT VVT = VT;
     if (VVT.isScalableVector())
       Sig.push_back(IIT_SCALABLE_VEC);
+    if (VVT.isScalableMatrix())
+      Sig.push_back(IIT_SCALABLE_MATRIX);
     switch (VVT.getVectorMinNumElements()) {
     default: PrintFatalError("unhandled vector type width in intrinsic!");
     case 1: Sig.push_back(IIT_V1); break;
@@ -427,6 +431,9 @@ static void UpdateArgCodes(Record *R, std::vector<unsigned char> &ArgCodes,
     UpdateArgCodes(R->getValueAsDef("ElTy"), ArgCodes, NumInserted, Mapping);
     break;
   case MVT::iPTRAny:
+    ++Tmp;
+    LLVM_FALLTHROUGH;
+  case MVT::mAny:
     ++Tmp;
     LLVM_FALLTHROUGH;
   case MVT::vAny:

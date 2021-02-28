@@ -925,6 +925,14 @@ def llvm_nxv8bf16_ty : LLVMType<nxv8bf16>;
 def llvm_nxv4f32_ty : LLVMType<nxv4f32>;
 def llvm_nxv2f64_ty : LLVMType<nxv2f64>;
 
+def llvm_mxv256i8_ty : LLVMType<mxv256i8>;
+def llvm_mxv64i16_ty : LLVMType<mxv64i16>;
+def llvm_mxv16i32_ty : LLVMType<mxv16i32>;
+def llvm_mxv4i64_ty  : LLVMType<mxv4i64>;
+def llvm_mxv1i128_ty : LLVMType<mxv1i128>;
+def llvm_mxv16f32_ty : LLVMType<mxv16f32>;
+def llvm_mxv4f64_ty  : LLVMType<mxv4f64>;
+
 let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
 
   class AdvSIMD_SVE_Create_2Vector_Tuple
@@ -1528,6 +1536,17 @@ class SVE_4Vec_BF16_Indexed
     : DefaultAttrsIntrinsic<[llvm_nxv4f32_ty],
                 [llvm_nxv4f32_ty, llvm_nxv8bf16_ty, llvm_nxv8bf16_ty, llvm_i64_ty],
                 [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+
+class SME_OuterProduct_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anymatrix_ty],
+                [
+                  LLVMScalarOrSameVectorWidth<1, llvm_i1_ty>,
+                  LLVMScalarOrSameVectorWidth<1, llvm_i1_ty>,
+                  LLVMMatchType<0>,
+                  llvm_anyvector_ty,
+                  LLVMMatchType<1>,
+                ],
+                [IntrNoMem]>;
 
 //
 // Vector tuple creation intrinsics (ACLE)
@@ -2551,6 +2570,13 @@ def int_aarch64_sve_bfmmla  : SVE_4Vec_BF16;
 def int_aarch64_sve_bfdot_lane   : SVE_4Vec_BF16_Indexed;
 def int_aarch64_sve_bfmlalb_lane : SVE_4Vec_BF16_Indexed;
 def int_aarch64_sve_bfmlalt_lane : SVE_4Vec_BF16_Indexed;
+
+//
+// SME ACLE
+//
+
+def int_aarch64_sme_fmopa : SME_OuterProduct_Intrinsic;
+def int_aarch64_sme_fmops : SME_OuterProduct_Intrinsic;
 }
 
 //

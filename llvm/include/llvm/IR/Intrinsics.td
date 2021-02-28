@@ -235,6 +235,7 @@ let isAny = true in {
   def llvm_anyint_ty     : LLVMType<iAny>;
   def llvm_anyfloat_ty   : LLVMType<fAny>;
   def llvm_anyvector_ty  : LLVMType<vAny>;
+  def llvm_anymatrix_ty  : LLVMType<mAny>;
 }
 def llvm_i1_ty         : LLVMType<i1>;
 def llvm_i8_ty         : LLVMType<i8>;

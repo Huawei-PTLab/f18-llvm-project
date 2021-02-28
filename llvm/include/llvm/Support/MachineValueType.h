@@ -474,7 +474,7 @@ namespace llvm {
     bool isOverloaded() const {
       return (SimpleTy == MVT::Any || SimpleTy == MVT::iAny ||
               SimpleTy == MVT::fAny || SimpleTy == MVT::vAny ||
-              SimpleTy == MVT::iPTRAny);
+              SimpleTy == MVT::mAny || SimpleTy == MVT::iPTRAny);
     }
 
     /// Return a vector with the same number of elements as this vector, but
@@ -906,6 +906,7 @@ namespace llvm {
       case iAny:
       case fAny:
       case vAny:
+      case mAny:
       case Any:
         llvm_unreachable("Value type is overloaded.");
       case token:

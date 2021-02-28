@@ -845,7 +845,9 @@ static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
     Result += "f";
   } else if (VectorType *VTy = dyn_cast<VectorType>(Ty)) {
     ElementCount EC = VTy->getElementCount();
-    if (EC.isScalable())
+    if (isa<ScalableMatrixType>(Ty))
+      Result += "mx";
+    else if (EC.isScalable())
       Result += "nx";
     Result += "v" + utostr(EC.getKnownMinValue()) +
               getMangledTypeStr(VTy->getElementType(), HasUnnamedType);
@@ -983,7 +985,8 @@ enum IIT_Info {
   IIT_PPCF128 = 52,
   IIT_V3 = 53,
   IIT_EXTERNREF = 54,
-  IIT_FUNCREF = 55
+  IIT_FUNCREF = 55,
+  IIT_SCALABLE_MATRIX = 56
 };
 
 static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
@@ -1203,6 +1206,10 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     DecodeIITType(NextElt, Infos, Info, OutputTable);
     return;
   }
+  case IIT_SCALABLE_MATRIX: {
+    DecodeIITType(NextElt, Infos, Info, OutputTable);
+    return;
+  }
   case IIT_VEC_OF_BITCASTS_TO_INT: {
     unsigned ArgInfo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::VecOfBitcastsToInt,
@@ -1276,6 +1283,10 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   case IITDescriptor::Vector:
     return VectorType::get(DecodeFixedType(Infos, Tys, Context),
                            D.Vector_Width);
+  case IITDescriptor::Matrix:
+    assert(D.Vector_Width.isScalable() && "unsupported fixed-size matrix type");
+    return ScalableMatrixType::get(DecodeFixedType(Infos, Tys, Context),
+                                   D.Vector_Width.getKnownMinValue());
   case IITDescriptor::Pointer:
     return PointerType::get(DecodeFixedType(Infos, Tys, Context),
                             D.Pointer_AddressSpace);
@@ -1460,6 +1471,12 @@ static bool matchIntrinsicType(
              matchIntrinsicType(VT->getElementType(), Infos, ArgTys,
                                 DeferredChecks, IsDeferredCheck);
     }
+    case IITDescriptor::Matrix: {
+      ScalableMatrixType *MT = dyn_cast<ScalableMatrixType>(Ty);
+      return !MT || MT->getElementCount() != D.Vector_Width ||
+             matchIntrinsicType(MT->getElementType(), Infos, ArgTys,
+                                DeferredChecks, IsDeferredCheck);
+    }
     case IITDescriptor::Pointer: {
       PointerType *PT = dyn_cast<PointerType>(Ty);
       if (!PT || PT->getAddressSpace() != D.Pointer_AddressSpace)
@@ -1505,6 +1522,7 @@ static bool matchIntrinsicType(
         case IITDescriptor::AK_AnyInteger: return !Ty->isIntOrIntVectorTy();
         case IITDescriptor::AK_AnyFloat:   return !Ty->isFPOrFPVectorTy();
         case IITDescriptor::AK_AnyVector:  return !isa<VectorType>(Ty);
+        case IITDescriptor::AK_AnyMatrix:  return !isa<ScalableMatrixType>(Ty);
         case IITDescriptor::AK_AnyPointer: return !isa<PointerType>(Ty);
         default:                           break;
       }

@@ -126,6 +126,7 @@ namespace Intrinsic {
       Quad,
       Integer,
       Vector,
+      Matrix,
       Pointer,
       Struct,
       Argument,
@@ -158,6 +159,7 @@ namespace Intrinsic {
       AK_AnyInteger,
       AK_AnyFloat,
       AK_AnyVector,
+      AK_AnyMatrix,
       AK_AnyPointer,
       AK_MatchType = 7
     };
