@@ -77,6 +77,8 @@
 // q: 1/4 width elements, 4x element count
 // o: 4x width elements, 1/4 element count
 //
+// y: matrix of default type
+//
 // w: vector of element type promoted to 64bits, vector maintains
 //    signedness of its element type.
 // f: element type promoted to uint64_t (splat to vector type)
@@ -757,6 +759,15 @@ multiclass SInstZPZ<string name, string types, string intrinsic, list<FlagType> 
 
 defm SVABS : SInstZPZ<"svabs", "csil", "aarch64_sve_abs">;
 defm SVNEG : SInstZPZ<"svneg", "csil", "aarch64_sve_neg">;
+
+//------------------------------------------------------------------------------
+
+multiclass SInstZaPPZ<string name, string types, string intrinsic, list<FlagType> flags=[]> {
+  def _M : SInst<name # "[_{d}]",  "yPPyd", types, MergeOp1, intrinsic, flags>;
+}
+
+defm SMADDHA  : SInstZaPPZ<"smaddha",  "ilUiUl", "aarch64_sme_addha", [IsSME, IsOverloadRetLast]>;
+defm SMADDVA  : SInstZaPPZ<"smaddva",  "ilUiUl", "aarch64_sme_addva", [IsSME, IsOverloadRetLast]>;
 
 //------------------------------------------------------------------------------
 

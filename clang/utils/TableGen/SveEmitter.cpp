@@ -68,6 +68,7 @@ class SVEType {
   bool Float, Signed, Immediate, Void, Constant, Pointer, BFloat;
   bool DefaultType, IsScalable, Predicate, PredicatePattern, PrefetchOp;
   unsigned Bitwidth, ElementBitwidth, NumVectors;
+  bool ScalableMatrix;
 
 public:
   SVEType() : SVEType(TypeSpec(), 'v') {}
@@ -76,7 +77,8 @@ public:
       : TS(TS), Float(false), Signed(true), Immediate(false), Void(false),
         Constant(false), Pointer(false), BFloat(false), DefaultType(false),
         IsScalable(true), Predicate(false), PredicatePattern(false),
-        PrefetchOp(false), Bitwidth(128), ElementBitwidth(~0U), NumVectors(1) {
+        PrefetchOp(false), Bitwidth(128), ElementBitwidth(~0U), NumVectors(1),
+        ScalableMatrix(false) {
     if (!TS.empty())
       applyTypespec();
     applyModifier(CharMod);
@@ -103,6 +105,7 @@ public:
   bool isPredicatePattern() const { return PredicatePattern; }
   bool isPrefetchOp() const { return PrefetchOp; }
   bool isConstant() const { return Constant; }
+  bool isScalableMatrix() const { return ScalableMatrix; }
   unsigned getElementSizeInBits() const { return ElementBitwidth; }
   unsigned getNumVectors() const { return NumVectors; }
 
@@ -359,6 +362,7 @@ public:
 
 std::string SVEType::builtin_str() const {
   std::string S;
+  unsigned TileSize = 0;
   if (isVoid())
     return "v";
 
@@ -372,8 +376,14 @@ std::string SVEType::builtin_str() const {
     case 1: S += "b"; break;
     case 8: S += "c"; break;
     case 16: S += "s"; break;
-    case 32: S += "i"; break;
-    case 64: S += "Wi"; break;
+    case 32:
+      S += "i";
+      TileSize = 16;
+      break;
+    case 64:
+      S += "Wi";
+      TileSize = 4;
+      break;
     case 128: S += "LLLi"; break;
     default: llvm_unreachable("Unhandled case!");
     }
@@ -413,6 +423,10 @@ std::string SVEType::builtin_str() const {
     return S;
   }
 
+  // Fix this in the future.
+  if (isScalableMatrix())
+    return "q" + utostr(TileSize) + S;
+
   assert(isScalableVector() && "Unsupported type");
   return "q" + utostr(getNumElements() * NumVectors) + S;
 }
@@ -428,7 +442,9 @@ std::string SVEType::str() const {
   if (Void)
     S += "void";
   else {
-    if (isScalableVector())
+    if (isScalableMatrix())
+      S += "sm";
+    else if (isScalableVector())
       S += "sv";
     if (!Signed && !isFloatingPoint())
       S += "u";
@@ -798,6 +814,10 @@ void SVEType::applyModifier(char Mod) {
     ElementBitwidth = Bitwidth = 32;
     NumVectors = 0;
     Signed = false;
+    break;
+  case 'y':
+    Bitwidth = ElementBitwidth;
+    ScalableMatrix = true;
     break;
   default:
     llvm_unreachable("Unhandled character!");
