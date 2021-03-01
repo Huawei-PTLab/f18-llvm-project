@@ -653,7 +653,8 @@ public:
 };
 
 inline ElementCount VectorType::getElementCount() const {
-  return ElementCount::get(ElementQuantity, isa<ScalableVectorType>(this));
+  return ElementCount::get(ElementQuantity, isa<ScalableVectorType>(this) ||
+                                                isa<ScalableMatrixType>(this));
 }
 
 /// Class to represent pointers.
