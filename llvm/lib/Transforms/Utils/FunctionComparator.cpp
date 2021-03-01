@@ -503,6 +503,17 @@ int FunctionComparator::cmpTypes(Type *TyL, Type *TyR) const {
                         STyR->getElementCount().getKnownMinValue());
     return cmpTypes(STyL->getElementType(), STyR->getElementType());
   }
+  case Type::ScalableMatrixTyID: {
+    auto *STyL = cast<ScalableMatrixType>(TyL);
+    auto *STyR = cast<ScalableMatrixType>(TyR);
+    assert(STyL->getElementCount().isScalable() &&
+           STyR->getElementCount().isScalable() &&
+           "Scalable matrix type should be scalable");
+    if (STyL->getElementCount() != STyR->getElementCount())
+      return cmpNumbers(STyL->getElementCount().getKnownMinValue(),
+                        STyR->getElementCount().getKnownMinValue());
+    return cmpTypes(STyL->getElementType(), STyR->getElementType());
+  }
   }
 }
 

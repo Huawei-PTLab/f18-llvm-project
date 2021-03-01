@@ -171,7 +171,8 @@ static void executeFRemInst(GenericValue &Dest, GenericValue Src1,
 
 #define IMPLEMENT_VECTOR_INTEGER_ICMP(OP, TY)                                  \
   case Type::FixedVectorTyID:                                                  \
-  case Type::ScalableVectorTyID: {                                             \
+  case Type::ScalableVectorTyID:                                               \
+  case Type::ScalableMatrixTyID: {                                             \
     assert(Src1.AggregateVal.size() == Src2.AggregateVal.size());              \
     Dest.AggregateVal.resize(Src1.AggregateVal.size());                        \
     for (uint32_t _i = 0; _i < Src1.AggregateVal.size(); _i++)                 \
@@ -371,6 +372,7 @@ void Interpreter::visitICmpInst(ICmpInst &I) {
 #define IMPLEMENT_VECTOR_FCMP(OP)                                              \
   case Type::FixedVectorTyID:                                                  \
   case Type::ScalableVectorTyID:                                               \
+  case Type::ScalableMatrixTyID:                                               \
     if (cast<VectorType>(Ty)->getElementType()->isFloatTy()) {                 \
       IMPLEMENT_VECTOR_FCMP_T(OP, Float);                                      \
     } else {                                                                   \
@@ -1956,6 +1958,7 @@ void Interpreter::visitExtractValueInst(ExtractValueInst &I) {
     case Type::StructTyID:
     case Type::FixedVectorTyID:
     case Type::ScalableVectorTyID:
+    case Type::ScalableMatrixTyID:
       Dest.AggregateVal = pSrc->AggregateVal;
     break;
     case Type::PointerTyID:
@@ -2004,6 +2007,7 @@ void Interpreter::visitInsertValueInst(InsertValueInst &I) {
     case Type::StructTyID:
     case Type::FixedVectorTyID:
     case Type::ScalableVectorTyID:
+    case Type::ScalableMatrixTyID:
       pDest->AggregateVal = Src2.AggregateVal;
     break;
     case Type::PointerTyID:

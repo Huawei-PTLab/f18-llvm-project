@@ -798,7 +798,8 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
   }
   case Type::X86_MMXTyID:
   case Type::FixedVectorTyID:
-  case Type::ScalableVectorTyID: {
+  case Type::ScalableVectorTyID:
+  case Type::ScalableMatrixTyID: {
     unsigned BitWidth = getTypeSizeInBits(Ty).getKnownMinSize();
     auto I = findAlignmentLowerBound(VECTOR_ALIGN, BitWidth);
     if (I != Alignments.end() && I->AlignType == VECTOR_ALIGN &&

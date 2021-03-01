@@ -1013,6 +1013,14 @@ void ModuleBitcodeWriter::writeTypeTable() {
         TypeVals.push_back(true);
       break;
     }
+    case Type::ScalableMatrixTyID: {
+      ScalableMatrixType *VT = cast<ScalableMatrixType>(T);
+      // MATRIX [numelts, eltty] // No fixed size matrix types yet.
+      Code = bitc::TYPE_CODE_MATRIX;
+      TypeVals.push_back(VT->getElementCount().getKnownMinValue());
+      TypeVals.push_back(VE.getTypeID(VT->getElementType()));
+      break;
+    }
     }
 
     // Emit the finished record.

@@ -149,6 +149,9 @@ struct TypeCloner {
       case LLVMScalableVectorTypeKind:
         return LLVMScalableVectorType(Clone(LLVMGetElementType(Src)),
                                       LLVMGetVectorSize(Src));
+      case LLVMScalableMatrixTypeKind:
+        return LLVMScalableMatrixType(Clone(LLVMGetElementType(Src)),
+                                      LLVMGetVectorSize(Src));
       case LLVMMetadataTypeKind:
         return LLVMMetadataTypeInContext(Ctx);
       case LLVMX86_AMXTypeKind:

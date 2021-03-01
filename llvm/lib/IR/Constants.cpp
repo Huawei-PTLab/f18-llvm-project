@@ -376,6 +376,7 @@ Constant *Constant::getNullValue(Type *Ty) {
   case Type::ArrayTyID:
   case Type::FixedVectorTyID:
   case Type::ScalableVectorTyID:
+  case Type::ScalableMatrixTyID:
     return ConstantAggregateZero::get(Ty);
   case Type::TokenTyID:
     return ConstantTokenNone::get(Ty->getContext());

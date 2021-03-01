@@ -517,7 +517,9 @@ public:
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(const Type *T) {
     return T->getTypeID() == FixedVectorTyID ||
-           T->getTypeID() == ScalableVectorTyID;
+           T->getTypeID() == ScalableVectorTyID ||
+           // T->getTypeID() == FixedMatrixTyID ||
+           T->getTypeID() == ScalableMatrixTyID;
   }
 };
 
@@ -621,6 +623,32 @@ public:
 
   static bool classof(const Type *T) {
     return T->getTypeID() == ScalableVectorTyID;
+  }
+};
+
+class ScalableMatrixType : public VectorType {
+protected:
+  ScalableMatrixType(Type *ElTy, unsigned MinNumElts)
+      : VectorType(ElTy, MinNumElts, ScalableMatrixTyID) {}
+
+public:
+  static ScalableMatrixType *get(Type *ElementType, unsigned MinNumElts);
+
+  static ScalableMatrixType *get(Type *ElementType,
+                                 const ScalableMatrixType *SMTy) {
+    return get(ElementType, SMTy->getMinNumElements());
+  }
+
+  static ScalableMatrixType *getInteger(ScalableMatrixType *SMTy) {
+    return cast<ScalableMatrixType>(VectorType::getInteger(SMTy));
+  }
+
+  /// Get the minimum number of elements in this matrix. The actual number of
+  /// elements in the matrix is an integer multiple of this value.
+  uint64_t getMinNumElements() const { return ElementQuantity; }
+
+  static bool classof(const Type *T) {
+    return T->getTypeID() == ScalableMatrixTyID;
   }
 };
 

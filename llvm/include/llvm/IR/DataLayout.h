@@ -706,7 +706,8 @@ inline TypeSize DataLayout::getTypeSizeInBits(Type *Ty) const {
   case Type::X86_FP80TyID:
     return TypeSize::Fixed(80);
   case Type::FixedVectorTyID:
-  case Type::ScalableVectorTyID: {
+  case Type::ScalableVectorTyID:
+  case Type::ScalableMatrixTyID: {
     VectorType *VTy = cast<VectorType>(Ty);
     auto EltCnt = VTy->getElementCount();
     uint64_t MinBits = EltCnt.getKnownMinValue() *

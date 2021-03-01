@@ -1454,6 +1454,7 @@ public:
 
   DenseMap<std::pair<Type *, uint64_t>, ArrayType *> ArrayTypes;
   DenseMap<std::pair<Type *, ElementCount>, VectorType *> VectorTypes;
+  DenseMap<std::pair<Type *, ElementCount>, VectorType *> MatrixTypes;
   DenseMap<Type *, PointerType *> PointerTypes; // Pointers in AddrSpace = 0
   DenseMap<std::pair<Type *, unsigned>, PointerType *> ASPointerTypes;
 

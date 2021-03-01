@@ -532,6 +532,8 @@ LLVMTypeKind LLVMGetTypeKind(LLVMTypeRef Ty) {
     return LLVMTokenTypeKind;
   case Type::ScalableVectorTyID:
     return LLVMScalableVectorTypeKind;
+  case Type::ScalableMatrixTyID:
+    return LLVMScalableVectorTypeKind;
   }
   llvm_unreachable("Unhandled TypeID.");
 }
@@ -791,6 +793,11 @@ LLVMTypeRef LLVMVectorType(LLVMTypeRef ElementType, unsigned ElementCount) {
 LLVMTypeRef LLVMScalableVectorType(LLVMTypeRef ElementType,
                                    unsigned ElementCount) {
   return wrap(ScalableVectorType::get(unwrap(ElementType), ElementCount));
+}
+
+LLVMTypeRef LLVMScalableMatrixType(LLVMTypeRef ElementType,
+                                   unsigned ElementCount) {
+  return wrap(ScalableMatrixType::get(unwrap(ElementType), ElementCount));
 }
 
 LLVMTypeRef LLVMGetElementType(LLVMTypeRef WrappedTy) {

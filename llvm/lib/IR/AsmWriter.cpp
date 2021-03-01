@@ -612,6 +612,15 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
     OS << '>';
     return;
   }
+  case Type::ScalableMatrixTyID: {
+    VectorType *PTy = cast<VectorType>(Ty);
+    ElementCount EC = PTy->getElementCount();
+    OS << "<mscale x ";
+    OS << EC.getKnownMinValue() << " x ";
+    print(PTy->getElementType(), OS);
+    OS << '>';
+    return;
+  }
   }
   llvm_unreachable("Invalid TypeID");
 }

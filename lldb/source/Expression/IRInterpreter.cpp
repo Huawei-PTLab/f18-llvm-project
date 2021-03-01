@@ -596,7 +596,8 @@ bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
         default:
           break;
         case Type::FixedVectorTyID:
-        case Type::ScalableVectorTyID: {
+        case Type::ScalableVectorTyID:
+        case Type::ScalableMatrixTyID: {
           LLDB_LOGF(log, "Unsupported operand type: %s",
                     PrintType(operand_type).c_str());
           error.SetErrorString(unsupported_operand_error);

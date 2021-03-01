@@ -294,7 +294,7 @@ public:
 
   /// Returns the minimum value this size can represent.
   ScalarTy getKnownMinValue() const { return this->Value; }
-  /// Returns whether the size is scaled by a runtime quantity (vscale).
+  /// Returns whether the size is scaled by a runtime quantity (vscale/mscale).
   bool isScalable() const { return this->UnivariateDim == ScalableDim; }
   /// A return value of true indicates we know at compile time that the number
   /// of elements (vscale * Min) is definitely even. However, returning false

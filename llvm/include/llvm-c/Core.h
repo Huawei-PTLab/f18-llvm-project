@@ -164,7 +164,8 @@ typedef enum {
   LLVMTokenTypeKind,     /**< Tokens */
   LLVMScalableVectorTypeKind, /**< Scalable SIMD vector type */
   LLVMBFloatTypeKind,    /**< 16 bit brain floating point type */
-  LLVMX86_AMXTypeKind    /**< X86 AMX */
+  LLVMX86_AMXTypeKind,   /**< X86 AMX */
+  LLVMScalableMatrixTypeKind /**< Scalable matrix type */
 } LLVMTypeKind;
 
 typedef enum {
@@ -1471,6 +1472,18 @@ LLVMTypeRef LLVMVectorType(LLVMTypeRef ElementType, unsigned ElementCount);
  * @see llvm::ScalableVectorType::get()
  */
 LLVMTypeRef LLVMScalableVectorType(LLVMTypeRef ElementType,
+                                   unsigned ElementCount);
+
+/**
+ * Create a matrix type that contains a defined type and has a scalable
+ * number of elements.
+ *
+ * The created type will exist in the context that its element type
+ * exists in.
+ *
+ * @see llvm::ScalableMatrixType::get()
+ */
+LLVMTypeRef LLVMScalableMatrixType(LLVMTypeRef ElementType,
                                    unsigned ElementCount);
 
 /**

@@ -1910,7 +1910,7 @@ Error BitcodeReader::parseTypeTableBody() {
         return error("Invalid type");
       ResultTy = ArrayType::get(ResultTy, Record[0]);
       break;
-    case bitc::TYPE_CODE_VECTOR:    // VECTOR: [numelts, eltty] or
+    case bitc::TYPE_CODE_VECTOR: {  // VECTOR: [numelts, eltty] or
                                     //         [numelts, eltty, scalable]
       if (Record.size() < 2)
         return error("Invalid record");
@@ -1921,6 +1921,18 @@ Error BitcodeReader::parseTypeTableBody() {
         return error("Invalid type");
       bool Scalable = Record.size() > 2 ? Record[2] : false;
       ResultTy = VectorType::get(ResultTy, Record[0], Scalable);
+      break;
+    }
+    case bitc::TYPE_CODE_MATRIX:    // MATRIX: [numelts, eltty]
+      if (Record.size() < 2)
+        return error("Invalid record");
+      if (Record[0] == 0)
+        return error("Invalid vector length");
+      ResultTy = getTypeByID(Record[1]);
+      // This should check that ResultTy is either integer or floating point.
+      if (!ResultTy || !StructType::isValidElementType(ResultTy))
+        return error("Invalid type");
+      ResultTy = ScalableMatrixType::get(ResultTy, Record[0]);
       break;
     }
 

@@ -551,6 +551,13 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
       getVT(VTy->getElementType(), /*HandleUnknown=*/ false),
             VTy->getElementCount());
   }
+  // case Type::FixedMatrixTyID:
+  case Type::ScalableMatrixTyID: {
+    VectorType *VTy = cast<VectorType>(Ty);
+    return getMatrixVT(
+      getVT(VTy->getElementType(), /*HandleUnknown=*/ false),
+            VTy->getElementCount());
+  }
   }
 }
 
@@ -567,6 +574,13 @@ EVT EVT::getEVT(Type *Ty, bool HandleUnknown){
   case Type::ScalableVectorTyID: {
     VectorType *VTy = cast<VectorType>(Ty);
     return getVectorVT(Ty->getContext(),
+                       getEVT(VTy->getElementType(), /*HandleUnknown=*/ false),
+                       VTy->getElementCount());
+  }
+  // case Type::FixedMatrixTyID:
+  case Type::ScalableMatrixTyID: {
+    VectorType *VTy = cast<VectorType>(Ty);
+    return getMatrixVT(Ty->getContext(),
                        getEVT(VTy->getElementType(), /*HandleUnknown=*/ false),
                        VTy->getElementCount());
   }

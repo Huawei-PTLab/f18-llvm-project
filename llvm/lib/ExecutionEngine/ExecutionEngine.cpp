@@ -615,20 +615,21 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
         }
       }
       break;
-      case Type::ScalableVectorTyID:
-        report_fatal_error(
-            "Scalable vector support not yet implemented in ExecutionEngine");
-      case Type::FixedVectorTyID:
-        // if the whole vector is 'undef' just reserve memory for the value.
-        auto *VTy = cast<FixedVectorType>(C->getType());
-        Type *ElemTy = VTy->getElementType();
-        unsigned int elemNum = VTy->getNumElements();
-        Result.AggregateVal.resize(elemNum);
-        if (ElemTy->isIntegerTy())
-          for (unsigned int i = 0; i < elemNum; ++i)
-            Result.AggregateVal[i].IntVal =
-                APInt(ElemTy->getPrimitiveSizeInBits(), 0);
-        break;
+    case Type::ScalableVectorTyID:
+    case Type::ScalableMatrixTyID:
+      report_fatal_error(
+          "Scalable vector/matrix support not yet implemented in ExecutionEngine");
+    case Type::FixedVectorTyID:
+      // if the whole vector is 'undef' just reserve memory for the value.
+      auto *VTy = cast<FixedVectorType>(C->getType());
+      Type *ElemTy = VTy->getElementType();
+      unsigned int elemNum = VTy->getNumElements();
+      Result.AggregateVal.resize(elemNum);
+      if (ElemTy->isIntegerTy())
+        for (unsigned int i = 0; i < elemNum; ++i)
+          Result.AggregateVal[i].IntVal =
+              APInt(ElemTy->getPrimitiveSizeInBits(), 0);
+      break;
     }
     return Result;
   }
@@ -909,8 +910,9 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
       llvm_unreachable("Unknown constant pointer type!");
     break;
   case Type::ScalableVectorTyID:
+  case Type::ScalableMatrixTyID:
     report_fatal_error(
-        "Scalable vector support not yet implemented in ExecutionEngine");
+        "Scalable vector/matrix support not yet implemented in ExecutionEngine");
   case Type::FixedVectorTyID: {
     unsigned elemNum;
     Type* ElemTy;
@@ -1042,8 +1044,11 @@ void ExecutionEngine::StoreValueToMemory(const GenericValue &Val,
 
     *((PointerTy*)Ptr) = Val.PointerVal;
     break;
-  case Type::FixedVectorTyID:
   case Type::ScalableVectorTyID:
+  case Type::ScalableMatrixTyID:
+    report_fatal_error(
+        "Scalable vector/matrix support not yet implemented in ExecutionEngine");
+  case Type::FixedVectorTyID:
     for (unsigned i = 0; i < Val.AggregateVal.size(); ++i) {
       if (cast<VectorType>(Ty)->getElementType()->isDoubleTy())
         *(((double*)Ptr)+i) = Val.AggregateVal[i].DoubleVal;
@@ -1094,8 +1099,9 @@ void ExecutionEngine::LoadValueFromMemory(GenericValue &Result,
     break;
   }
   case Type::ScalableVectorTyID:
+  case Type::ScalableMatrixTyID:
     report_fatal_error(
-        "Scalable vector support not yet implemented in ExecutionEngine");
+        "Scalable vector/matrix support not yet implemented in ExecutionEngine");
   case Type::FixedVectorTyID: {
     auto *VT = cast<FixedVectorType>(Ty);
     Type *ElemT = VT->getElementType();

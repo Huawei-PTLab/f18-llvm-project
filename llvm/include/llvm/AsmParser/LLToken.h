@@ -38,6 +38,7 @@ enum Kind {
   colon,   // :
 
   kw_vscale,
+  kw_mscale,
   kw_x,
   kw_true,
   kw_false,

@@ -88,6 +88,12 @@ namespace llvm {
       return getExtendedVectorVT(Context, VT, EC);
     }
 
+    /// Returns the EVT that represents a matrix EC.Min elements in length,
+    /// where each element is of type VT.
+    static EVT getMatrixVT(LLVMContext &Context, EVT VT, ElementCount EC) {
+      return MVT::INVALID_SIMPLE_VALUE_TYPE;
+    }
+
     /// Return a vector with the same number of elements as this vector, but
     /// with the element type converted to an integer type with the same
     /// bitwidth.

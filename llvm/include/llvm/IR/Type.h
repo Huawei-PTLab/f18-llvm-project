@@ -68,13 +68,15 @@ public:
     TokenTyID,     ///< Tokens
 
     // Derived types... see DerivedTypes.h file.
-    IntegerTyID,       ///< Arbitrary bit width integers
-    FunctionTyID,      ///< Functions
-    PointerTyID,       ///< Pointers
-    StructTyID,        ///< Structures
-    ArrayTyID,         ///< Arrays
-    FixedVectorTyID,   ///< Fixed width SIMD vector type
-    ScalableVectorTyID ///< Scalable SIMD vector type
+    IntegerTyID,        ///< Arbitrary bit width integers
+    FunctionTyID,       ///< Functions
+    PointerTyID,        ///< Pointers
+    StructTyID,         ///< Structures
+    ArrayTyID,          ///< Arrays
+    FixedVectorTyID,    ///< Fixed width SIMD vector type
+    ScalableVectorTyID, ///< Scalable SIMD vector type
+    // FixedMatrixTyID,    ///< Fixed size matrix type
+    ScalableMatrixTyID  ///< Scalable matrix type
   };
 
 private:
@@ -224,7 +226,9 @@ public:
 
   /// True if this is an instance of VectorType.
   inline bool isVectorTy() const {
-    return getTypeID() == ScalableVectorTyID || getTypeID() == FixedVectorTyID;
+    return getTypeID() == FixedVectorTyID ||
+           getTypeID() == ScalableVectorTyID ||
+           getTypeID() == ScalableMatrixTyID;
   }
 
   /// Return true if this type could be converted with a lossless BitCast to

@@ -2701,8 +2701,10 @@ bool LLParser::parseStructBody(SmallVectorImpl<Type *> &Body) {
 ///     ::= '[' APSINTVAL 'x' Types ']'
 ///     ::= '<' APSINTVAL 'x' Types '>'
 ///     ::= '<' 'vscale' 'x' APSINTVAL 'x' Types '>'
+///     ::= '<' 'mscale' 'x' APSINTVAL 'x' Types '>'
 bool LLParser::parseArrayVectorType(Type *&Result, bool IsVector) {
   bool Scalable = false;
+  bool Matrix = false;
 
   if (IsVector && Lex.getKind() == lltok::kw_vscale) {
     Lex.Lex(); // consume the 'vscale'
@@ -2710,6 +2712,15 @@ bool LLParser::parseArrayVectorType(Type *&Result, bool IsVector) {
       return true;
 
     Scalable = true;
+  }
+
+  if (IsVector && Lex.getKind() == lltok::kw_mscale) {
+    Lex.Lex(); // consume the 'mscale'
+    if (parseToken(lltok::kw_x, "expected 'x' after mscale"))
+      return true;
+
+    Scalable = true;
+    Matrix = true;
   }
 
   if (Lex.getKind() != lltok::APSInt || Lex.getAPSIntVal().isSigned() ||
@@ -2732,7 +2743,16 @@ bool LLParser::parseArrayVectorType(Type *&Result, bool IsVector) {
                  "expected end of sequential type"))
     return true;
 
-  if (IsVector) {
+  if (Matrix) {
+    if (Size == 0)
+      return error(SizeLoc, "zero element matrix is illegal");
+    if (Size != 1 && Size != 4 && Size != 16 && Size != 64 && Size != 256)
+      return error(SizeLoc, "matrix size must be a squared power-of-two");
+    // This should check if EltTy is either integer or floating point.
+    if (!VectorType::isValidElementType(EltTy))
+      return error(TypeLoc, "invalid matrix element type");
+    Result = ScalableMatrixType::get(EltTy, unsigned(Size));
+  } else if (IsVector) {
     if (Size == 0)
       return error(SizeLoc, "zero element vector is illegal");
     if ((unsigned)Size != Size)

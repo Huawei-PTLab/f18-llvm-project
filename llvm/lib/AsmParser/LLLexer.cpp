@@ -730,6 +730,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(umin);
 
   KEYWORD(vscale);
+  KEYWORD(mscale);
   KEYWORD(x);
   KEYWORD(blockaddress);
   KEYWORD(dso_local_equivalent);

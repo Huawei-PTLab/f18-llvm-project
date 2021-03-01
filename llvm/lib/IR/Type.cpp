@@ -177,7 +177,8 @@ TypeSize Type::getPrimitiveSizeInBits() const {
   case Type::IntegerTyID:
     return TypeSize::Fixed(cast<IntegerType>(this)->getBitWidth());
   case Type::FixedVectorTyID:
-  case Type::ScalableVectorTyID: {
+  case Type::ScalableVectorTyID:
+  case Type::ScalableMatrixTyID: {
     const VectorType *VTy = cast<VectorType>(this);
     ElementCount EC = VTy->getElementCount();
     TypeSize ETS = VTy->getElementType()->getPrimitiveSizeInBits();
@@ -720,6 +721,29 @@ ScalableVectorType *ScalableVectorType::get(Type *ElementType,
   if (!Entry)
     Entry = new (pImpl->Alloc) ScalableVectorType(ElementType, MinNumElts);
   return cast<ScalableVectorType>(Entry);
+}
+
+//===----------------------------------------------------------------------===//
+//                       ScalableMatrixType Implementation
+//===----------------------------------------------------------------------===//
+
+ScalableMatrixType *ScalableMatrixType::get(Type *ElementType,
+                                            unsigned MinNumElts) {
+  assert((MinNumElts == 1 || MinNumElts == 4 || MinNumElts == 16 ||
+          MinNumElts == 64 || MinNumElts == 256) &&
+         "#Elements of a ScalableMatrixType must be a squared power-of-two.");
+  assert((ElementType->isIntegerTy() || ElementType->isFloatingPointTy()) &&
+         "Element type of a ScalableMatrixType must be an integer or "
+         "floating point type.");
+
+  auto EC = ElementCount::getScalable(MinNumElts);
+
+  LLVMContextImpl *pImpl = ElementType->getContext().pImpl;
+  VectorType *&Entry = pImpl->MatrixTypes[std::make_pair(ElementType, EC)];
+
+  if (!Entry)
+    Entry = new (pImpl->Alloc) ScalableMatrixType(ElementType, MinNumElts);
+  return cast<ScalableMatrixType>(Entry);
 }
 
 //===----------------------------------------------------------------------===//
