@@ -209,22 +209,33 @@ def nxv2f64  : ValueType<128, 168>;  // n x  2 x  f64 vector value
 def nxv4f64  : ValueType<256, 169>;  // n x  4 x  f64 vector value
 def nxv8f64  : ValueType<512, 170>;  // n x  8 x  f64 vector value
 
-def x86mmx    : ValueType<64,   171>;  // X86 MMX value
-def FlagVT    : ValueType<0,    172>;  // Pre-RA sched glue
-def isVoid    : ValueType<0,    173>;  // Produces no value
-def untyped   : ValueType<8,    174>;  // Produces an untyped value
-def funcref   : ValueType<0,    175>;  // WebAssembly's funcref type
-def externref : ValueType<0,    176>;  // WebAssembly's externref type
-def x86amx    : ValueType<8192, 177>;  // X86 AMX value
-def i64x8     : ValueType<512,  178>;  // 8 Consecutive GPRs (AArch64)
+def mxv256i8 : ValueType<2048, 171>; // n x (16x16) x i8   matrix value
+def mxv64i16 : ValueType<1024, 172>; // n x   (8x8) x i16  matrix value
+def mxv16i32 : ValueType<512,  173>;  // n x   (4x4) x i32  matrix value
+def mxv4i64  : ValueType<256,  174>;  // n x   (2x2) x i64  matrix value
+def mxv1i128 : ValueType<128,  175>;  // n x   (1x1) x i128 matrix value
+def mxv16f32 : ValueType<512,  176>;  // n x   (4x4) x f32  matrix value
+def mxv4f64  : ValueType<256,  177>;  // n x   (2x2) x f64  matrix value
+
+def x86mmx    : ValueType<64,   178>;  // X86 MMX value
+def FlagVT    : ValueType<0,    179>;  // Pre-RA sched glue
+def isVoid    : ValueType<0,    180>;  // Produces no value
+def untyped   : ValueType<8,    181>;  // Produces an untyped value
+def funcref   : ValueType<0,    182>;  // WebAssembly's funcref type
+def externref : ValueType<0,    183>;  // WebAssembly's externref type
+def x86amx    : ValueType<8192, 184>;  // X86 AMX value
+def i64x8     : ValueType<512,  185>;  // 8 Consecutive GPRs (AArch64)
 
 
-def token      : ValueType<0, 248>;  // TokenTy
-def MetadataVT : ValueType<0, 249>;  // Metadata
+def token      : ValueType<0, 247>;  // TokenTy
+def MetadataVT : ValueType<0, 248>;  // Metadata
 
 // Pseudo valuetype mapped to the current pointer size to any address space.
 // Should only be used in TableGen.
-def iPTRAny    : ValueType<0, 250>;
+def iPTRAny    : ValueType<0, 249>;
+
+// Pseudo valuetype to represent "matrix of any size"
+def mAny   : ValueType<0  , 250>;
 
 // Pseudo valuetype to represent "vector of any size"
 def vAny       : ValueType<0, 251>;

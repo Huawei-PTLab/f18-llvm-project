@@ -91,7 +91,7 @@ namespace llvm {
     /// Returns the EVT that represents a matrix EC.Min elements in length,
     /// where each element is of type VT.
     static EVT getMatrixVT(LLVMContext &Context, EVT VT, ElementCount EC) {
-      return MVT::INVALID_SIMPLE_VALUE_TYPE;
+      return MVT::getMatrixVT(VT.V, EC);
     }
 
     /// Return a vector with the same number of elements as this vector, but
@@ -215,7 +215,8 @@ namespace llvm {
 
     /// Return true if this is an overloaded type for TableGen.
     bool isOverloaded() const {
-      return (V==MVT::iAny || V==MVT::fAny || V==MVT::vAny || V==MVT::iPTRAny);
+      return (V==MVT::iAny || V==MVT::fAny || V==MVT::vAny ||
+              V==MVT::mAny || V==MVT::iPTRAny);
     }
 
     /// Return true if the bit size is a multiple of 8.

@@ -257,20 +257,31 @@ namespace llvm {
       FIRST_VECTOR_VALUETYPE = v1i1,
       LAST_VECTOR_VALUETYPE  = nxv8f64,
 
-      x86mmx         = 171,    // This is an X86 MMX value
+      mxv256i8       = 171,   // m x (16x16) x i8
+      mxv64i16       = 172,   // m x   (8x8) x i16
+      mxv16i32       = 173,   // m x   (4x4) x i32
+      mxv4i64        = 174,   // m x   (2x2) x i64
+      mxv1i128       = 175,   // m x   (1x1) x i128
+      mxv16f32       = 176,   // m x   (4x4) x f32
+      mxv4f64        = 177,   // m x   (2x2) x f64
 
-      Glue           = 172,    // This glues nodes together during pre-RA sched
+      FIRST_SCALABLE_MATRIX_VALUETYPE = mxv256i8,
+      LAST_SCALABLE_MATRIX_VALUETYPE = mxv4f64,
 
-      isVoid         = 173,    // This has no value
+      x86mmx         = 178,    // This is an X86 MMX value
 
-      Untyped        = 174,    // This value takes a register, but has
+      Glue           = 179,    // This glues nodes together during pre-RA sched
+
+      isVoid         = 180,    // This has no value
+
+      Untyped        = 181,    // This value takes a register, but has
                                // unspecified type.  The register class
                                // will be determined by the opcode.
 
-      funcref        = 175,    // WebAssembly's funcref type
-      externref      = 176,    // WebAssembly's externref type
-      x86amx         = 177,    // This is an X86 AMX value
-      i64x8          = 178,    // 8 Consecutive GPRs (AArch64)
+      funcref        = 182,    // WebAssembly's funcref type
+      externref      = 183,    // WebAssembly's externref type
+      x86amx         = 184,    // This is an X86 AMX value
+      i64x8          = 185,    // 8 Consecutive GPRs (AArch64)
 
       FIRST_VALUETYPE =  1,    // This is always the beginning of the list.
       LAST_VALUETYPE = i64x8,  // This always remains at the end of the list.
@@ -282,15 +293,20 @@ namespace llvm {
       MAX_ALLOWED_VALUETYPE = 192,
 
       // A value of type llvm::TokenTy
-      token          = 248,
+      token          = 247,
 
       // This is MDNode or MDString.
-      Metadata       = 249,
+      Metadata       = 248,
 
       // An int value the size of the pointer of the current
       // target to any address space. This must only be used internal to
       // tblgen. Other than for overloading, we treat iPTRAny the same as iPTR.
-      iPTRAny        = 250,
+      iPTRAny        = 249,
+
+      // A square matrix with any size and element size. This is used
+      // for intrinsics that have overloadings based on matrix types.
+      // This is only for tblgen's consumption!
+      mAny           = 250,
 
       // A vector with any length and element size. This is used
       // for intrinsics that have overloadings based on vector types.
@@ -378,6 +394,13 @@ namespace llvm {
     bool isFixedLengthVector() const {
       return (SimpleTy >= MVT::FIRST_FIXEDLEN_VECTOR_VALUETYPE &&
               SimpleTy <= MVT::LAST_FIXEDLEN_VECTOR_VALUETYPE);
+    }
+
+    /// Return true if this is a matrix value type where the
+    /// runtime length is machine dependent
+    bool isScalableMatrix() const {
+      return (SimpleTy >= MVT::FIRST_SCALABLE_MATRIX_VALUETYPE &&
+              SimpleTy <= MVT::LAST_SCALABLE_MATRIX_VALUETYPE);
     }
 
     /// Return true if this is a 16-bit vector type.
@@ -555,7 +578,8 @@ namespace llvm {
       case nxv8i8:
       case nxv16i8:
       case nxv32i8:
-      case nxv64i8: return i8;
+      case nxv64i8:
+      case mxv256i8: return i8;
       case v1i16:
       case v2i16:
       case v3i16:
@@ -572,7 +596,8 @@ namespace llvm {
       case nxv4i16:
       case nxv8i16:
       case nxv16i16:
-      case nxv32i16: return i16;
+      case nxv32i16:
+      case mxv64i16: return i16;
       case v1i32:
       case v2i32:
       case v3i32:
@@ -594,7 +619,8 @@ namespace llvm {
       case nxv4i32:
       case nxv8i32:
       case nxv16i32:
-      case nxv32i32: return i32;
+      case nxv32i32:
+      case mxv16i32: return i32;
       case v1i64:
       case v2i64:
       case v3i64:
@@ -610,8 +636,10 @@ namespace llvm {
       case nxv4i64:
       case nxv8i64:
       case nxv16i64:
-      case nxv32i64: return i64;
-      case v1i128: return i128;
+      case nxv32i64:
+      case mxv4i64: return i64;
+      case v1i128:
+      case mxv1i128: return i128;
       case v1f16:
       case v2f16:
       case v3f16:
@@ -661,7 +689,8 @@ namespace llvm {
       case nxv2f32:
       case nxv4f32:
       case nxv8f32:
-      case nxv16f32: return f32;
+      case nxv16f32:
+      case mxv16f32: return f32;
       case v1f64:
       case v2f64:
       case v3f64:
@@ -675,7 +704,8 @@ namespace llvm {
       case nxv1f64:
       case nxv2f64:
       case nxv4f64:
-      case nxv8f64: return f64;
+      case nxv8f64:
+      case mxv4f64: return f64;
       }
     }
 
@@ -703,7 +733,8 @@ namespace llvm {
       case v256i32:
       case v256i64:
       case v256f32:
-      case v256f64: return 256;
+      case v256f64:
+      case mxv256i8: return 256;
       case v128i1:
       case v128i8:
       case v128i16:
@@ -723,7 +754,8 @@ namespace llvm {
       case v64f32:
       case v64f64:
       case nxv64i1:
-      case nxv64i8: return 64;
+      case nxv64i8:
+      case mxv64i16: return 64;
       case v32i1:
       case v32i8:
       case v32i16:
@@ -754,7 +786,9 @@ namespace llvm {
       case nxv16i32:
       case nxv16i64:
       case nxv16f16:
-      case nxv16f32: return 16;
+      case nxv16f32:
+      case mxv16i32:
+      case mxv16f32: return 16;
       case v8i1:
       case v8i8:
       case v8i16:
@@ -796,7 +830,9 @@ namespace llvm {
       case nxv4f16:
       case nxv4bf16:
       case nxv4f32:
-      case nxv4f64: return 4;
+      case nxv4f64:
+      case mxv4i64:
+      case mxv4f64: return 4;
       case v3i16:
       case v3i32:
       case v3i64:
@@ -839,7 +875,8 @@ namespace llvm {
       case nxv1f16:
       case nxv1bf16:
       case nxv1f32:
-      case nxv1f64: return 1;
+      case nxv1f64:
+      case mxv1i128: return 1;
       }
     }
 
@@ -963,7 +1000,8 @@ namespace llvm {
       case nxv8f16:
       case nxv8bf16:
       case nxv4f32:
-      case nxv2f64: return TypeSize::Scalable(128);
+      case nxv2f64:
+      case mxv1i128: return TypeSize::Scalable(128);
       case v5i32:
       case v5f32: return TypeSize::Fixed(160);
       case v6i32:
@@ -987,7 +1025,9 @@ namespace llvm {
       case nxv4i64:
       case nxv16f16:
       case nxv8f32:
-      case nxv4f64: return TypeSize::Scalable(256);
+      case nxv4f64:
+      case mxv4i64:
+      case mxv4f64: return TypeSize::Scalable(256);
       case i64x8:
       case v512i1:
       case v64i8:
@@ -1004,7 +1044,9 @@ namespace llvm {
       case nxv8i64:
       case nxv32f16:
       case nxv16f32:
-      case nxv8f64: return TypeSize::Scalable(512);
+      case nxv8f64:
+      case mxv16i32:
+      case mxv16f32: return TypeSize::Scalable(512);
       case v1024i1:
       case v128i8:
       case v64i16:
@@ -1015,7 +1057,8 @@ namespace llvm {
       case v32f32:
       case v16f64: return TypeSize::Fixed(1024);
       case nxv32i32:
-      case nxv16i64: return TypeSize::Scalable(1024);
+      case nxv16i64:
+      case mxv64i16: return TypeSize::Scalable(1024);
       case v256i8:
       case v128i16:
       case v64i32:
@@ -1024,7 +1067,8 @@ namespace llvm {
       case v128bf16:
       case v64f32:
       case v32f64: return TypeSize::Fixed(2048);
-      case nxv32i64: return TypeSize::Scalable(2048);
+      case nxv32i64:
+      case mxv256i8: return TypeSize::Scalable(2048);
       case v512i8:
       case v256i16:
       case v128i32:
@@ -1396,8 +1440,40 @@ namespace llvm {
       return getVectorVT(VT, EC.getKnownMinValue());
     }
 
-    static MVT getMatrixVT(MVT VT, ElementCount EC) {
+    static MVT getScalableMatrixVT(MVT VT, unsigned NumElements) {
+      switch(VT.SimpleTy) {
+        default:
+          break;
+        case MVT::i8:
+          if (NumElements == 256) return MVT::mxv256i8;
+          break;
+        case MVT::i16:
+          if (NumElements == 64)  return MVT::mxv64i16;
+          break;
+        case MVT::i32:
+          if (NumElements == 16)  return MVT::mxv16i32;
+          break;
+        case MVT::i64:
+          if (NumElements == 4)  return MVT::mxv4i64;
+          break;
+        case MVT::i128:
+          if (NumElements == 1)  return MVT::mxv1i128;
+          break;
+        case MVT::f32:
+          if (NumElements == 16)  return MVT::mxv16f32;
+          break;
+        case MVT::f64:
+          if (NumElements == 4)  return MVT::mxv4f64;
+          break;
+      }
       return (MVT::SimpleValueType)(MVT::INVALID_SIMPLE_VALUE_TYPE);
+    }
+
+    static MVT getMatrixVT(MVT VT, ElementCount EC) {
+      // TODO: Fixed-size matrix types?
+      // if (EC.isScalable())
+        return getScalableMatrixVT(VT, EC.getKnownMinValue());
+      // return getVectorVT(VT, EC.getKnownMinValue());
     }
 
     /// Return the value type corresponding to the specified type.  This returns

@@ -172,6 +172,14 @@ std::string EVT::getEVTString() const {
   case MVT::Untyped:   return "Untyped";
   case MVT::funcref:   return "funcref";
   case MVT::externref: return "externref";
+  // SME types
+  case MVT::mxv256i8:  return "mxv256i8";
+  case MVT::mxv64i16:  return "mxv64i16";
+  case MVT::mxv16i32:  return "mxv16i32";
+  case MVT::mxv4i64:   return "mxv4i64";
+  case MVT::mxv1i128:  return "mxv1i128";
+  case MVT::mxv16f32:  return "mxv16f32";
+  case MVT::mxv4f64:   return "mxv4f64";
   }
 }
 
@@ -519,6 +527,21 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
   case MVT::nxv8f64:
     return ScalableVectorType::get(Type::getDoubleTy(Context), 8);
   case MVT::Metadata: return Type::getMetadataTy(Context);
+  // SME types
+  case MVT::mxv256i8:
+    return ScalableMatrixType::get(Type::getInt8Ty(Context), 256);
+  case MVT::mxv64i16:
+    return ScalableMatrixType::get(Type::getInt16Ty(Context), 64);
+  case MVT::mxv16i32:
+    return ScalableMatrixType::get(Type::getInt32Ty(Context), 16);
+  case MVT::mxv4i64:
+    return ScalableMatrixType::get(Type::getInt64Ty(Context), 4);
+  case MVT::mxv1i128:
+    return ScalableMatrixType::get(Type::getInt128Ty(Context), 1);
+  case MVT::mxv16f32:
+    return ScalableMatrixType::get(Type::getFloatTy(Context), 16);
+  case MVT::mxv4f64:
+    return ScalableMatrixType::get(Type::getDoubleTy(Context), 4);
   }
 }
 
