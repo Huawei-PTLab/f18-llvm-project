@@ -1542,6 +1542,12 @@ namespace llvm {
                                 MVT::LAST_FP_SCALABLE_VECTOR_VALUETYPE,
                                 force_iteration_on_noniterable_enum);
     }
+
+    static auto scalable_matrix_valuetypes() {
+      return enum_seq_inclusive(MVT::FIRST_SCALABLE_MATRIX_VALUETYPE,
+                                MVT::LAST_SCALABLE_MATRIX_VALUETYPE,
+                                force_iteration_on_noniterable_enum);
+    }
     /// @}
   };
 

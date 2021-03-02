@@ -366,6 +366,17 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
   }
 
+  if (Subtarget->hasSME()) {
+    // Add legal SME data types
+    addRegisterClass(MVT::mxv256i8, &AArch64::MPR8RegClass);
+    addRegisterClass(MVT::mxv64i16, &AArch64::MPR16RegClass);
+    addRegisterClass(MVT::mxv16i32, &AArch64::MPR32RegClass);
+    addRegisterClass(MVT::mxv16f32, &AArch64::MPR32RegClass);
+    addRegisterClass(MVT::mxv4i64, &AArch64::MPR64RegClass);
+    addRegisterClass(MVT::mxv4f64, &AArch64::MPR64RegClass);
+    addRegisterClass(MVT::mxv1i128, &AArch64::MPR128RegClass);
+  }
+
   // Compute derived properties from the register classes
   computeRegisterProperties(Subtarget->getRegisterInfo());
 
@@ -18609,15 +18620,18 @@ bool AArch64TargetLowering::shouldLocalize(
 }
 
 bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
-  if (isa<ScalableVectorType>(Inst.getType()))
+  if (isa<ScalableVectorType>(Inst.getType()) ||
+      isa<ScalableMatrixType>(Inst.getType()))
     return true;
 
   for (unsigned i = 0; i < Inst.getNumOperands(); ++i)
-    if (isa<ScalableVectorType>(Inst.getOperand(i)->getType()))
+    if (isa<ScalableVectorType>(Inst.getOperand(i)->getType()) ||
+        isa<ScalableMatrixType>(Inst.getOperand(i)->getType()))
       return true;
 
   if (const AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
-    if (isa<ScalableVectorType>(AI->getAllocatedType()))
+    if (isa<ScalableVectorType>(AI->getAllocatedType()) ||
+        isa<ScalableMatrixType>(AI->getAllocatedType()))
       return true;
   }
 

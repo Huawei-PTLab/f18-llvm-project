@@ -1429,6 +1429,14 @@ public:
     if (auto *PTy = dyn_cast<PointerType>(Ty))
       return getPointerTy(DL, PTy->getAddressSpace());
 
+    // ScalableMatrixType extends VectorType, so check the former before
+    // checking the latter.
+    if (auto *MTy = dyn_cast<ScalableMatrixType>(Ty)) {
+      Type *EltTy = MTy->getElementType();
+      return EVT::getMatrixVT(Ty->getContext(), EVT::getEVT(EltTy, false),
+                              MTy->getElementCount());
+    }
+
     if (auto *VTy = dyn_cast<VectorType>(Ty)) {
       Type *EltTy = VTy->getElementType();
       // Lower vectors of pointers to native pointer types.

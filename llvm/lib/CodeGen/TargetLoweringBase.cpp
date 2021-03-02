@@ -1502,6 +1502,18 @@ void TargetLoweringBase::computeRegisterProperties(
     }
   }
 
+  for (unsigned i = MVT::FIRST_SCALABLE_MATRIX_VALUETYPE;
+       i <= (unsigned)MVT::LAST_SCALABLE_MATRIX_VALUETYPE; ++i) {
+    MVT VT = (MVT::SimpleValueType)i;
+    if (isTypeLegal(VT))
+      continue;
+
+    // TypeScalarizeScalableVector is intentionally unimplemented.
+    // Determine how to split scalable matrixes into vectors in the future.
+    TransformToType[i] = MVT::Other;
+    ValueTypeActions.setTypeAction(VT, TypeScalarizeScalableVector);
+  }
+
   // Determine the 'representative' register class for each value type.
   // An representative register class is the largest (meaning one which is
   // not a sub-register class / subreg register class) legal register class for

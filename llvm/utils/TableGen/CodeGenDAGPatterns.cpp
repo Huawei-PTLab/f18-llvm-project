@@ -834,6 +834,11 @@ void TypeInfer::expandOverloads(TypeSetByHwMode::SetType &Out,
           if (Legal.count(T))
             Out.insert(T);
         return;
+      case MVT::mAny:
+        for (MVT T : MVT::scalable_matrix_valuetypes())
+          if (Legal.count(T))
+            Out.insert(T);
+        return;
       case MVT::Any:
         for (MVT T : MVT::all_valuetypes())
           if (Legal.count(T))
