@@ -1470,11 +1470,14 @@ namespace llvm {
       return (MVT::SimpleValueType)(MVT::INVALID_SIMPLE_VALUE_TYPE);
     }
 
+    static MVT getMatrixVT(MVT VT, unsigned NumElements, bool IsScalable) {
+      assert(IsScalable && "Fixed-size matrix not supported!");
+      return getScalableMatrixVT(VT, NumElements);
+    }
+
     static MVT getMatrixVT(MVT VT, ElementCount EC) {
-      // TODO: Fixed-size matrix types?
-      // if (EC.isScalable())
-        return getScalableMatrixVT(VT, EC.getKnownMinValue());
-      // return getVectorVT(VT, EC.getKnownMinValue());
+      assert(EC.isScalable() && "Fixed-size matrix not supported!");
+      return getScalableMatrixVT(VT, EC.getKnownMinValue());
     }
 
     /// Return the value type corresponding to the specified type.  This returns

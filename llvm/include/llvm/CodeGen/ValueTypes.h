@@ -89,9 +89,12 @@ namespace llvm {
     }
 
     /// Returns the EVT that represents a matrix EC.Min elements in length,
-    /// where each element is of type VT.
+    /// where each element is of type VT. EC.Min must be 1, 4, 16, 64, or 256.
     static EVT getMatrixVT(LLVMContext &Context, EVT VT, ElementCount EC) {
-      return MVT::getMatrixVT(VT.V, EC);
+      MVT M = MVT::getMatrixVT(VT.V, EC);
+      assert(M.SimpleTy != MVT::INVALID_SIMPLE_VALUE_TYPE &&
+             "Invalid matrix type!");
+      return M;
     }
 
     /// Return a vector with the same number of elements as this vector, but
@@ -166,6 +169,12 @@ namespace llvm {
     /// length is machine dependent
     bool isScalableVector() const {
       return isSimple() ? V.isScalableVector() : isExtendedScalableVector();
+    }
+
+    /// Return true if this is a matrix type which has a machine-dependent
+    /// run-time size.
+    bool isScalableMatrix() const {
+      return V.isScalableMatrix();
     }
 
     bool isFixedLengthVector() const {
@@ -338,6 +347,14 @@ namespace llvm {
     /// Given a vector type, return the minimum number of elements it contains.
     unsigned getVectorMinNumElements() const {
       return getVectorElementCount().getKnownMinValue();
+    }
+
+    // Given a matrix type, return the type of each element.
+    EVT getMatrixElementType() const {
+      assert(isScalableMatrix() && "Invalid matrix type");
+      if (isSimple())
+        return V.getVectorElementType();
+      return getExtendedMatrixElementType();
     }
 
     /// Return the size of the specified value type in bits.
