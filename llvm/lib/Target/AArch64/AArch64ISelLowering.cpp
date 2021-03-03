@@ -5376,6 +5376,23 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
         RC = &AArch64::PPRRegClass;
       else if (RegVT.isScalableVector())
         RC = &AArch64::ZPRRegClass;
+      else if (RegVT.isScalableMatrix() &&
+               RegVT.getMatrixElementType() == MVT::i8)
+        RC = &AArch64::MPR8RegClass;
+      else if (RegVT.isScalableMatrix() &&
+               RegVT.getMatrixElementType() == MVT::i16)
+        RC = &AArch64::MPR16RegClass;
+      else if (RegVT.isScalableMatrix() &&
+               (RegVT.getMatrixElementType() == MVT::f32 ||
+                RegVT.getMatrixElementType() == MVT::i32))
+        RC = &AArch64::MPR32RegClass;
+      else if (RegVT.isScalableMatrix() &&
+               (RegVT.getMatrixElementType() == MVT::f64 ||
+                RegVT.getMatrixElementType() == MVT::i64))
+        RC = &AArch64::MPR64RegClass;
+      else if (RegVT.isScalableMatrix() &&
+               RegVT.getMatrixElementType() == MVT::i128)
+        RC = &AArch64::MPR128RegClass;
       else
         llvm_unreachable("RegVT not supported by FORMAL_ARGUMENTS Lowering");
 
