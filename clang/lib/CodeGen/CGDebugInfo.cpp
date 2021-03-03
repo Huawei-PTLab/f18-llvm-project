@@ -737,6 +737,19 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
       return DBuilder.createVectorType(/*Size*/ 0, Align, ElemTy,
                                        SubscriptArray);
     }
+  // Add support for SME types in the future. Return something safe to avoid
+  // generating an error.
+#define SME_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/AArch64SMEACLETypes.def"
+    {
+      unsigned DiagID = CGM.getDiags().getCustomDiagID(
+          DiagnosticsEngine::Error,
+          "cannot yet generate debug info for SME type '%0'");
+      auto Name = BT->getName(CGM.getContext().getPrintingPolicy());
+      CGM.getDiags().Report(DiagID) << Name;
+      // Return something safe.
+      return CreateType(cast<const BuiltinType>(CGM.getContext().IntTy));
+    }
   // It doesn't make sense to generate debug info for PowerPC MMA vector types.
   // So we return a safe type here to avoid generating an error.
 #define PPC_VECTOR_TYPE(Name, Id, size) \

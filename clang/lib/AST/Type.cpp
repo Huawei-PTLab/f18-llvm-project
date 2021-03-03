@@ -2298,6 +2298,9 @@ bool Type::isSizelessBuiltinType() const {
       // SVE Types
 #define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/AArch64SVEACLETypes.def"
+      // SME Types
+#define SME_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/AArch64SMEACLETypes.def"
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
       return true;
@@ -2326,6 +2329,10 @@ bool Type::isVLSTBuiltinType() const {
     case BuiltinType::SveFloat64:
     case BuiltinType::SveBFloat16:
     case BuiltinType::SveBool:
+    case BuiltinType::SmeInt32:
+    case BuiltinType::SmeInt64:
+    case BuiltinType::SmeUint32:
+    case BuiltinType::SmeUint64:
       return true;
     default:
       return false;
@@ -3106,6 +3113,10 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   case Id: \
     return Name;
 #include "clang/Basic/AArch64SVEACLETypes.def"
+#define SME_TYPE(Name, Id, SingletonId) \
+  case Id: \
+    return Name;
+#include "clang/Basic/AArch64SMEACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
   case Id: \
     return #Name;
@@ -4135,6 +4146,9 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
 #define SVE_TYPE(Name, Id, SingletonId) \
     case BuiltinType::Id:
 #include "clang/Basic/AArch64SVEACLETypes.def"
+#define SME_TYPE(Name, Id, SingletonId) \
+    case BuiltinType::Id:
+#include "clang/Basic/AArch64SMEACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
     case BuiltinType::Id:
 #include "clang/Basic/PPCTypes.def"

@@ -276,6 +276,7 @@ namespace clang {
     bool isTupleCreate() const { return Flags & IsTupleCreate; }
     bool isTupleGet() const { return Flags & IsTupleGet; }
     bool isTupleSet() const { return Flags & IsTupleSet; }
+    bool isSME() const { return Flags & IsSME; }
 
     uint64_t getBits() const { return Flags; }
     bool isFlagSet(uint64_t Flag) const { return Flags & Flag; }

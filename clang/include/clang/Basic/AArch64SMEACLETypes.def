@@ -1,0 +1,54 @@
+//===-- AArch64SMEACLETypes.def - Metadata about SME types ------*- C++ -*-===//
+//
+//
+//===----------------------------------------------------------------------===//
+//
+//  This file defines various SME builtin types.  The macros are:
+//
+//    SME_TYPE(Name, Id, SingletonId) - A builtin type that has not been
+//    covered by any other #define.  Defining this macro covers all
+//    the builtins.
+//
+//    SME_VECTOR_TYPE(Name, Id, SingletonId, ElKind, ElBits, IsSigned, IsFP) -
+//    An SME scalable vector.
+//
+//    SME_PREDICATE_TYPE(Name, Id, SingletonId, ElKind) - An SME scalable
+//    predicate. For now, use SVE_PREDICATE_TYPE directly here.
+//
+// where:
+//
+//  - Name is the name of the builtin type.
+//
+//  - BuiltinType::Id is the enumerator defining the type.
+//
+//  - Context.SingletonId is the global singleton of this type.
+//
+//  - ElKind enumerates the type of the elements.
+//
+//  - ElBits is the size of one element in bits.
+//
+//  - IsSigned is true for vectors of signed integer elements and
+//    for vectors of floating-point elements.
+//
+//  - IsFP is true for vectors of floating-point elements.
+//
+//  - IsBF true for vector of brain float elements.
+//===----------------------------------------------------------------------===//
+
+#ifndef SME_VECTOR_TYPE
+#define SME_VECTOR_TYPE(Name, MangledName, Id, SingletonId, NumEls, ElBits,    \
+                        IsSigned, IsFP, IsBF)                                  \
+  SME_TYPE(Name, Id, SingletonId)
+#endif
+
+//===- Vector point types -----------------------------------------------===//
+
+
+SME_VECTOR_TYPE("__SMInt32_t", "__SMInt32_t", SmeInt32, SmeInt32Ty, 16, 32, true, false, false)
+SME_VECTOR_TYPE("__SMInt64_t", "__SMInt64_t", SmeInt64, SmeInt64Ty, 4, 64, true, false, false)
+
+SME_VECTOR_TYPE("__SMUint32_t", "__SMUint32_t", SmeUint32, SmeUint32Ty, 16, 32, false, false, false)
+SME_VECTOR_TYPE("__SMUint64_t", "__SMUint64_t", SmeUint64, SmeUint64Ty, 4, 64, false, false, false)
+
+#undef SME_VECTOR_TYPE
+#undef SME_TYPE

@@ -106,6 +106,9 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   // even without SVE.
   HasAArch64SVETypes = true;
 
+  // Make the SME types available.
+  HasAArch64SMETypes = true;
+
   // {} in inline assembly are neon specifiers, not assembly variant
   // specifiers.
   NoAsmVariants = true;

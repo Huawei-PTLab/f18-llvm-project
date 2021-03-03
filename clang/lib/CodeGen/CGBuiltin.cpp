@@ -8597,6 +8597,21 @@ CodeGenFunction::getSVEPredType(const SVETypeFlags &TypeFlags) {
   }
 }
 
+// Return the llvm scalable matrix type corresponding to the specific element
+// TypeFlags.
+llvm::ScalableMatrixType *
+CodeGenFunction::getSMEType(const SVETypeFlags &TypeFlags) {
+
+  switch (TypeFlags.getEltType()) {
+  default:
+    llvm_unreachable("Invalid SVETypeFlag!");
+  case SVETypeFlags::EltTyInt32:
+    return llvm::ScalableMatrixType::get(Builder.getInt32Ty(), 16);
+  case SVETypeFlags::EltTyInt64:
+    return llvm::ScalableMatrixType::get(Builder.getInt64Ty(), 4);
+  }
+}
+
 // Return the llvm vector type corresponding to the specified element TypeFlags.
 llvm::ScalableVectorType *
 CodeGenFunction::getSVEType(const SVETypeFlags &TypeFlags) {
@@ -8645,6 +8660,34 @@ constexpr unsigned SVEBitsPerBlock = 128;
 static llvm::ScalableVectorType *getSVEVectorForElementType(llvm::Type *EltTy) {
   unsigned NumElts = SVEBitsPerBlock / EltTy->getScalarSizeInBits();
   return llvm::ScalableVectorType::get(EltTy, NumElts);
+}
+
+Value *CodeGenFunction::EmitSMEPredicateCast(Value *Pred,
+                                             llvm::ScalableMatrixType *Vty) {
+  llvm::VectorType *RTy;
+  unsigned IntID = Intrinsic::aarch64_sve_convert_from_svbool;
+  switch (Vty->getMinNumElements()) {
+  default:
+    llvm_unreachable("unsupported element count!");
+  case 1:
+    RTy = llvm::VectorType::get(IntegerType::get(getLLVMContext(), 1), 1, true);
+    break;
+  case 4:
+    RTy = llvm::VectorType::get(IntegerType::get(getLLVMContext(), 1), 2, true);
+    break;
+  case 16:
+    RTy = llvm::VectorType::get(IntegerType::get(getLLVMContext(), 1), 4, true);
+    break;
+  case 64:
+    RTy = llvm::VectorType::get(IntegerType::get(getLLVMContext(), 1), 8, true);
+    break;
+  case 256:
+    RTy =
+        llvm::VectorType::get(IntegerType::get(getLLVMContext(), 1), 16, true);
+    break;
+  }
+  Function *F = CGM.getIntrinsic(IntID, RTy);
+  return Builder.CreateCall(F, Pred);
 }
 
 // Reinterpret the input predicate so that it can be used to correctly isolate
@@ -9033,6 +9076,17 @@ static void InsertExplicitUndefOperand(CGBuilderTy &Builder, llvm::Type *Ty,
   Ops.insert(Ops.begin(), SplatUndef);
 }
 
+SmallVector<llvm::Type *, 2> CodeGenFunction::getSMEOverloadTypes(
+    SVETypeFlags TypeFlags, llvm::Type *ResultType, ArrayRef<Value *> Ops) {
+  if (TypeFlags.isOverloadNone())
+    return {};
+
+  llvm::Type *DefaultType = getSMEType(TypeFlags);
+
+  assert(TypeFlags.isOverloadDefault() && "Unexpected value for overloads");
+  return {DefaultType};
+}
+
 SmallVector<llvm::Type *, 2>
 CodeGenFunction::getSVEOverloadTypes(const SVETypeFlags &TypeFlags,
                                      llvm::Type *ResultType,
@@ -9131,8 +9185,12 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
     // Predicates must match the main datatype.
     for (unsigned i = 0, e = Ops.size(); i != e; ++i)
       if (auto PredTy = dyn_cast<llvm::VectorType>(Ops[i]->getType()))
-        if (PredTy->getElementType()->isIntegerTy(1))
-          Ops[i] = EmitSVEPredicateCast(Ops[i], getSVEType(TypeFlags));
+        if (PredTy->getElementType()->isIntegerTy(1)) {
+          if (!TypeFlags.isSME())
+            Ops[i] = EmitSVEPredicateCast(Ops[i], getSVEType(TypeFlags));
+          else
+            Ops[i] = EmitSMEPredicateCast(Ops[i], getSMEType(TypeFlags));
+        }
 
     // Splat scalar operand to vector (intrinsics with _n infix)
     if (TypeFlags.hasSplatOperand()) {
@@ -9154,8 +9212,14 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
       Ops[1] = Builder.CreateCall(Sel, {Ops[0], Ops[1], SplatZero});
     }
 
-    Function *F = CGM.getIntrinsic(Builtin->LLVMIntrinsic,
-                                   getSVEOverloadTypes(TypeFlags, Ty, Ops));
+    Function *F;
+    if (!TypeFlags.isSME())
+      F = CGM.getIntrinsic(Builtin->LLVMIntrinsic,
+                           getSVEOverloadTypes(TypeFlags, Ty, Ops));
+    else
+      F = CGM.getIntrinsic(Builtin->LLVMIntrinsic,
+                           getSMEOverloadTypes(TypeFlags, Ty, Ops));
+
     Value *Call = Builder.CreateCall(F, Ops);
 
     // Predicate results must be converted to svbool_t.

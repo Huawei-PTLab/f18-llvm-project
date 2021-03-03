@@ -4177,8 +4177,12 @@ public:
   SmallVector<llvm::Type *, 2>
   getSVEOverloadTypes(const SVETypeFlags &TypeFlags, llvm::Type *ReturnType,
                       ArrayRef<llvm::Value *> Ops);
+  SmallVector<llvm::Type *, 2>
+  getSMEOverloadTypes(const SVETypeFlags TypeFlags, llvm::Type *ReturnType,
+                      ArrayRef<llvm::Value *> Ops);
   llvm::Type *getEltType(const SVETypeFlags &TypeFlags);
   llvm::ScalableVectorType *getSVEType(const SVETypeFlags &TypeFlags);
+  llvm::ScalableMatrixType *getSMEType(const SVETypeFlags &TypeFlags);
   llvm::ScalableVectorType *getSVEPredType(const SVETypeFlags &TypeFlags);
   llvm::Value *EmitSVEAllTruePred(const SVETypeFlags &TypeFlags);
   llvm::Value *EmitSVEDupX(llvm::Value *Scalar);
@@ -4192,6 +4196,8 @@ public:
                            unsigned BuiltinID);
   llvm::Value *EmitSVEPredicateCast(llvm::Value *Pred,
                                     llvm::ScalableVectorType *VTy);
+  llvm::Value *EmitSMEPredicateCast(llvm::Value *Pred,
+                                    llvm::ScalableMatrixType *VTy);
   llvm::Value *EmitSVEGatherLoad(const SVETypeFlags &TypeFlags,
                                  llvm::SmallVectorImpl<llvm::Value *> &Ops,
                                  unsigned IntID);

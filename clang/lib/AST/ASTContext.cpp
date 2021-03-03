@@ -1445,6 +1445,12 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 #include "clang/Basic/AArch64SVEACLETypes.def"
   }
 
+  if (Target.hasAArch64SMETypes()) {
+#define SME_TYPE(Name, Id, SingletonId) \
+    InitBuiltinType(SingletonId, BuiltinType::Id);
+#include "clang/Basic/AArch64SMEACLETypes.def"
+  }
+
   if (Target.getTriple().isPPC64()) {
 #define PPC_VECTOR_MMA_TYPE(Name, Id, Size) \
       InitBuiltinType(Id##Ty, BuiltinType::Id);
@@ -2212,6 +2218,17 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Align = 16;                                                                \
     break;
 #include "clang/Basic/AArch64SVEACLETypes.def"
+    // The SME types are effectively target-specific. The length of an
+    // SME_VECTOR_TYPE is only know at runtime, but each builtin can have
+    // different preffered alignment since the tile shapes are different for
+    // the same MVL.
+#define SME_VECTOR_TYPE(Name, MangledName, Id, SingletonId, NumEls, ElBits,    \
+                        IsSigned, IsFP, IsBF)                                  \
+  case BuiltinType::Id:                                                        \
+    Width = 0;                                                                 \
+    Align = 128;                                                               \
+    break;
+#include "clang/Basic/AArch64SMEACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size)                                        \
   case BuiltinType::Id:                                                        \
     Width = Size;                                                              \
@@ -3873,6 +3890,14 @@ ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
     return SVE_INT_ELTTY(64, 2, true, 4);
   case BuiltinType::SveUint64x4:
     return SVE_INT_ELTTY(64, 2, false, 4);
+  case BuiltinType::SmeInt32:
+    return SVE_INT_ELTTY(32, 16, true, 1);
+  case BuiltinType::SmeInt64:
+    return SVE_INT_ELTTY(64, 4, true, 1);
+  case BuiltinType::SmeUint32:
+    return SVE_INT_ELTTY(32, 16, false, 1);
+  case BuiltinType::SmeUint64:
+    return SVE_INT_ELTTY(64, 4, false, 1);
   case BuiltinType::SveBool:
     return SVE_ELTTY(BoolTy, 16, 1);
   case BuiltinType::SveFloat16:
@@ -3928,8 +3953,23 @@ ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
 /// type.
 QualType ASTContext::getScalableVectorType(QualType EltTy,
                                            unsigned NumElts) const {
-  if (Target->hasAArch64SVETypes()) {
+  // This needs to be fixed in the future by separating out the SME parts as
+  // "__clang_svint32x4_t" and ""__SMInt32_t" are treated the same here where
+  // EltTySize = 32 and NumElts = 16.
+  if (Target->hasAArch64SVETypes() || Target->hasAArch64SMETypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);
+#define SME_VECTOR_TYPE(Name, MangledName, Id, SingletonId, NumEls, ElBits,    \
+                        IsSigned, IsFP, IsBF)                                  \
+  if (!EltTy->isBooleanType() &&                                               \
+      ((EltTy->hasIntegerRepresentation() &&                                   \
+        EltTy->hasSignedIntegerRepresentation() == IsSigned) ||                \
+       (EltTy->hasFloatingRepresentation() && !EltTy->isBFloat16Type() &&      \
+        IsFP && !IsBF) ||                                                      \
+       (EltTy->hasFloatingRepresentation() && EltTy->isBFloat16Type() &&       \
+        IsBF && !IsFP)) &&                                                     \
+      EltTySize == ElBits && NumElts == NumEls) {                              \
+    return SingletonId;                                                        \
+  }
 #define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId, NumEls, ElBits,    \
                         IsSigned, IsFP, IsBF)                                  \
   if (!EltTy->isBooleanType() &&                                               \
@@ -3945,6 +3985,7 @@ QualType ASTContext::getScalableVectorType(QualType EltTy,
 #define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId, NumEls)         \
   if (EltTy->isBooleanType() && NumElts == NumEls)                             \
     return SingletonId;
+#include "clang/Basic/AArch64SMEACLETypes.def"
 #include "clang/Basic/AArch64SVEACLETypes.def"
   } else if (Target->hasRISCVVTypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);
@@ -7418,6 +7459,9 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
 #define SVE_TYPE(Name, Id, SingletonId) \
     case BuiltinType::Id:
 #include "clang/Basic/AArch64SVEACLETypes.def"
+#define SME_TYPE(Name, Id, SingletonId) \
+    case BuiltinType::Id:
+#include "clang/Basic/AArch64SMEACLETypes.def"
 #define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/RISCVVTypes.def"
       {

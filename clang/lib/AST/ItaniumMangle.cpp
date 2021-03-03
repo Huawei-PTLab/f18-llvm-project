@@ -3066,6 +3066,16 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
         << type_name;                                                          \
     break;
 #include "clang/Basic/AArch64SVEACLETypes.def"
+  // The SME types are effectively target-specific. Need to fix this in the
+  // future.
+#define SME_VECTOR_TYPE(InternalName, MangledName, Id, SingletonId, NumEls,    \
+                        ElBits, IsSigned, IsFP, IsBF)                          \
+  case BuiltinType::Id:                                                        \
+    type_name = MangledName;                                                   \
+    Out << (type_name == InternalName ? "u" : "") << type_name.size()          \
+        << type_name;                                                          \
+    break;
+#include "clang/Basic/AArch64SMEACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
   case BuiltinType::Id: \
     type_name = #Name; \

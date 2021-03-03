@@ -7045,6 +7045,11 @@ QualType ASTReader::GetType(TypeID ID) {
       T = Context.SingletonId; \
       break;
 #include "clang/Basic/AArch64SVEACLETypes.def"
+#define SME_TYPE(Name, Id, SingletonId) \
+  case PREDEF_TYPE_##Id##_ID: \
+    T = Context.SingletonId; \
+    break;
+#include "clang/Basic/AArch64SMEACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
     case PREDEF_TYPE_##Id##_ID: \
       T = Context.Id##Ty; \

@@ -408,6 +408,12 @@ void Sema::Initialize() {
 #include "clang/Basic/AArch64SVEACLETypes.def"
   }
 
+  if (Context.getTargetInfo().hasAArch64SMETypes()) {
+#define SME_TYPE(Name, Id, SingletonId)                                        \
+    addImplicitTypedef(Name, Context.SingletonId);
+#include "clang/Basic/AArch64SMEACLETypes.def"
+  }
+
   if (Context.getTargetInfo().getTriple().isPPC64()) {
 #define PPC_VECTOR_MMA_TYPE(Name, Id, Size) \
       addImplicitTypedef(#Name, Context.Id##Ty);

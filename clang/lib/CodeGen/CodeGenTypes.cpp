@@ -596,6 +596,16 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
                                            Info.EC.getKnownMinValue() *
                                                Info.NumVectors);
     }
+    case BuiltinType::SmeInt32:
+    case BuiltinType::SmeInt64:
+    case BuiltinType::SmeUint32:
+    case BuiltinType::SmeUint64: {
+      ASTContext::BuiltinVectorTypeInfo Info =
+          Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(Ty));
+      return llvm::ScalableMatrixType::get(ConvertType(Info.ElementType),
+                                           Info.EC.getKnownMinValue() *
+                                               Info.NumVectors);
+    }
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
     case BuiltinType::Id: \
       ResultType = \

@@ -2502,6 +2502,9 @@ public:
 // SVE Types
 #define SVE_TYPE(Name, Id, SingletonId) Id,
 #include "clang/Basic/AArch64SVEACLETypes.def"
+// SME Types
+#define SME_TYPE(Name, Id, SingletonId) Id,
+#include "clang/Basic/AArch64SMEACLETypes.def"
 // PPC MMA Types
 #define PPC_VECTOR_TYPE(Name, Id, Size) Id,
 #include "clang/Basic/PPCTypes.def"

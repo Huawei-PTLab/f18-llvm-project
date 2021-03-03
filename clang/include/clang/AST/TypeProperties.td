@@ -765,6 +765,10 @@ let Class = BuiltinType in {
       case BuiltinType::ID: return ctx.SINGLETON_ID;
 #include "clang/Basic/AArch64SVEACLETypes.def"
 
+#define SME_TYPE(NAME, ID, SINGLETON_ID) \
+      case BuiltinType::ID: return ctx.SINGLETON_ID;
+#include "clang/Basic/AArch64SMEACLETypes.def"
+
 #define PPC_VECTOR_TYPE(NAME, ID, SIZE) \
       case BuiltinType::ID: return ctx.ID##Ty;
 #include "clang/Basic/PPCTypes.def"

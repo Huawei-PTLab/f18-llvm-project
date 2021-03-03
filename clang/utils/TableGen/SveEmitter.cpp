@@ -1103,6 +1103,10 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "typedef __SVUint32_t svuint32_t;\n";
   OS << "typedef __SVUint64_t svuint64_t;\n";
   OS << "typedef __SVFloat16_t svfloat16_t;\n\n";
+  OS << "typedef __SMInt32_t smint32_t;\n";
+  OS << "typedef __SMInt64_t smint64_t;\n";
+  OS << "typedef __SMUint32_t smuint32_t;\n";
+  OS << "typedef __SMUint64_t smuint64_t;\n\n";
 
   OS << "#if defined(__ARM_FEATURE_SVE_BF16) && "
         "!defined(__ARM_FEATURE_BF16_SCALAR_ARITHMETIC)\n";
