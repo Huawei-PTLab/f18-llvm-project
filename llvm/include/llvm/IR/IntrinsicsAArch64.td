@@ -1537,6 +1537,16 @@ class SVE_4Vec_BF16_Indexed
                 [llvm_nxv4f32_ty, llvm_nxv8bf16_ty, llvm_nxv8bf16_ty, llvm_i64_ty],
                 [IntrNoMem, ImmArg<ArgIndex<3>>]>;
 
+class SME_1VectorArg_2Pred_Instrinsic
+    : DefaultAttrsIntrinsic<[llvm_anymatrix_ty],
+                [
+                  LLVMMatrixPredicate<0>,
+                  LLVMMatrixPredicate<0>,
+                  LLVMMatchType<0>,
+                  LLVMMatrixVector<0>
+                ],
+                [IntrNoMem]>;
+
 class SME_OuterProduct_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anymatrix_ty],
                 [
@@ -2575,8 +2585,11 @@ def int_aarch64_sve_bfmlalt_lane : SVE_4Vec_BF16_Indexed;
 // SME ACLE
 //
 
+def int_aarch64_sme_addha : SME_1VectorArg_2Pred_Instrinsic;
+def int_aarch64_sme_addva : SME_1VectorArg_2Pred_Instrinsic;
 def int_aarch64_sme_fmopa : SME_OuterProduct_Intrinsic;
 def int_aarch64_sme_fmops : SME_OuterProduct_Intrinsic;
+
 }
 
 //

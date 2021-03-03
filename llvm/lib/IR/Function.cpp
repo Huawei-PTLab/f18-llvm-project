@@ -986,7 +986,9 @@ enum IIT_Info {
   IIT_V3 = 53,
   IIT_EXTERNREF = 54,
   IIT_FUNCREF = 55,
-  IIT_SCALABLE_MATRIX = 56
+  IIT_SCALABLE_MATRIX = 56,
+  IIT_MATRIX_VECTOR = 57,
+  IIT_MATRIX_PREDICATE = 58
 };
 
 static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
@@ -1196,6 +1198,18 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
                                              ArgInfo));
     return;
   }
+  case IIT_MATRIX_VECTOR: {
+    unsigned ArgInfo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    OutputTable.push_back(
+        IITDescriptor::get(IITDescriptor::VecFromMatrix, ArgInfo));
+    return;
+  }
+  case IIT_MATRIX_PREDICATE: {
+    unsigned ArgInfo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    OutputTable.push_back(
+        IITDescriptor::get(IITDescriptor::PredVecFromMatrix, ArgInfo));
+    return;
+  }
   case IIT_VEC_ELEMENT: {
     unsigned ArgInfo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::VecElementArgument,
@@ -1321,6 +1335,18 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
     assert(VTy && "Expected an argument of Vector Type");
     int SubDivs = D.Kind == IITDescriptor::Subdivide2Argument ? 1 : 2;
     return VectorType::getSubdividedVectorType(VTy, SubDivs);
+  }
+  case IITDescriptor::VecFromMatrix: {
+    Type *Ty = Tys[D.getArgumentNumber()];
+    ScalableMatrixType *MTy = dyn_cast<ScalableMatrixType>(Ty);
+    assert(MTy && "Expected an argument of ScalableMatrix Type");
+    return MTy->getVectorType();
+  }
+  case IITDescriptor::PredVecFromMatrix: {
+    Type *Ty = Tys[D.getArgumentNumber()];
+    ScalableMatrixType *MTy = dyn_cast<ScalableMatrixType>(Ty);
+    assert(MTy && "Expected an argument of ScalableMatrix Type");
+    return MTy->getVectorType(IntegerType::get(MTy->getContext(), 1));
   }
   case IITDescriptor::HalfVecArgument:
     return VectorType::getHalfElementsVectorType(cast<VectorType>(
@@ -1655,6 +1681,32 @@ static bool matchIntrinsicType(
         NewTy = VectorType::getSubdividedVectorType(VTy, SubDivs);
         return Ty != NewTy;
       }
+      return true;
+    }
+    case IITDescriptor::VecFromMatrix: {
+      // If this is a forward reference, defer the check for later.
+      if (D.getArgumentNumber() >= ArgTys.size())
+        return IsDeferredCheck || DeferCheck(Ty);
+
+      Type *NewTy = ArgTys[D.getArgumentNumber()];
+      if (auto *MTy = dyn_cast<ScalableMatrixType>(NewTy)) {
+        NewTy = MTy->getVectorType();
+        return Ty != NewTy;
+      }
+      assert(0 && "IITDescriptor::VecFromMatrix used on non-matrix type");
+      return true;
+    }
+    case IITDescriptor::PredVecFromMatrix: {
+      // If this is a forward reference, defer the check for later.
+      if (D.getArgumentNumber() >= ArgTys.size())
+        return IsDeferredCheck || DeferCheck(Ty);
+
+      Type *NewTy = ArgTys[D.getArgumentNumber()];
+      if (auto *MTy = dyn_cast<ScalableMatrixType>(NewTy)) {
+        NewTy = MTy->getVectorType(IntegerType::get(MTy->getContext(), 1));
+        return Ty != NewTy;
+      }
+      assert(0 && "IITDescriptor::PredVecFromMatrix used on non-matrix type");
       return true;
     }
     case IITDescriptor::VecOfBitcastsToInt: {

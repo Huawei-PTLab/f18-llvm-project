@@ -143,6 +143,8 @@ namespace Intrinsic {
       VecOfBitcastsToInt,
       AMX,
       PPCQuad,
+      VecFromMatrix,
+      PredVecFromMatrix,
     } Kind;
 
     union {
@@ -170,7 +172,8 @@ namespace Intrinsic {
              Kind == SameVecWidthArgument || Kind == PtrToArgument ||
              Kind == PtrToElt || Kind == VecElementArgument ||
              Kind == Subdivide2Argument || Kind == Subdivide4Argument ||
-             Kind == VecOfBitcastsToInt);
+             Kind == VecOfBitcastsToInt || Kind == VecFromMatrix ||
+             Kind == PredVecFromMatrix);
       return Argument_Info >> 3;
     }
     ArgKind getArgumentKind() const {
@@ -178,7 +181,8 @@ namespace Intrinsic {
              Kind == TruncArgument || Kind == HalfVecArgument ||
              Kind == SameVecWidthArgument || Kind == PtrToArgument ||
              Kind == VecElementArgument || Kind == Subdivide2Argument ||
-             Kind == Subdivide4Argument || Kind == VecOfBitcastsToInt);
+             Kind == Subdivide4Argument || Kind == VecOfBitcastsToInt ||
+             Kind == VecFromMatrix || Kind == PredVecFromMatrix);
       return (ArgKind)(Argument_Info & 7);
     }
 

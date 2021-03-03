@@ -210,6 +210,12 @@ class LLVMScalarOrSameVectorWidth<int idx, LLVMType elty>
   ValueType ElTy = elty.VT;
 }
 
+// Match the matrix type to generate appropriate predicate type.
+class LLVMMatrixPredicate<int idx> : LLVMMatchType<idx>;
+
+// Match the matrix type to generate a row or column vector.
+class LLVMMatrixVector<int idx> : LLVMMatchType<idx>;
+
 class LLVMPointerTo<int num> : LLVMMatchType<num>;
 class LLVMPointerToElt<int num> : LLVMMatchType<num>;
 class LLVMVectorOfAnyPointersToElt<int num> : LLVMMatchType<num>;

@@ -411,6 +411,10 @@ protected:
   /// - For ScalableVectorType = <vscale x ElementQuantity x ty>,
   ///   there are vscale * ElementQuantity elements in this vector, where
   ///   vscale is a runtime-constant integer greater than 0.
+  /// - For ScalableMatrixType = <mscale x ElementQuantity x ty>,
+  ///   there are mscale * ElementQuantity elements in this matrix, where
+  ///   mscale is a runtime-constant integer greater than 0. ElementQuantity
+  ///   is assumed to be a squared power of two.
   const unsigned ElementQuantity;
 
   VectorType(Type *ElType, unsigned EQ, Type::TypeID TID);
@@ -627,6 +631,33 @@ public:
 };
 
 class ScalableMatrixType : public VectorType {
+private:
+  /// Return the size of a row or a column in this matrix. This is currently
+  /// hardcoded to support only AArch64 Scalable Matrix Extension.
+  unsigned getBaseVectorLength() {
+    unsigned NumElements = 0;
+    switch (getMinNumElements()) {
+    default:
+      llvm_unreachable("unhandled type");
+    case 256:
+      NumElements = 16;
+      break;
+    case 64:
+      NumElements = 8;
+      break;
+    case 16:
+      NumElements = 4;
+      break;
+    case 4:
+      NumElements = 2;
+      break;
+    case 1:
+      NumElements = 1;
+      break;
+    }
+    return NumElements;
+  }
+
 protected:
   ScalableMatrixType(Type *ElTy, unsigned MinNumElts)
       : VectorType(ElTy, MinNumElts, ScalableMatrixTyID) {}
@@ -646,6 +677,18 @@ public:
   /// Get the minimum number of elements in this matrix. The actual number of
   /// elements in the matrix is an integer multiple of this value.
   uint64_t getMinNumElements() const { return ElementQuantity; }
+
+  /// Return a VectorType of the same element type, with the length set to the
+  /// square root of the size of this matrix.
+  VectorType *getVectorType() {
+    return VectorType::get(getElementType(), getBaseVectorLength(), true);
+  }
+
+  /// Return a VectorType of the specified element type, with the length set to
+  /// the square root of the size of this matrix.
+  VectorType *getVectorType(Type *ETy) {
+    return VectorType::get(ETy, getBaseVectorLength(), true);
+  }
 
   static bool classof(const Type *T) {
     return T->getTypeID() == ScalableMatrixTyID;
