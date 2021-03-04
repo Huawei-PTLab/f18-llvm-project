@@ -87,6 +87,22 @@ def CC_AArch64_AAPCS : CallingConv<[
   CCIfType<[nxv2i1, nxv4i1, nxv8i1, nxv16i1],
            CCPassIndirect<i64>>,
 
+  CCIfType<[mxv256i8],
+           CCAssignToReg<[ZAB0]>>,
+
+  CCIfType<[mxv64i16],
+           CCAssignToReg<[ZAH0, ZAH1]>>,
+
+  CCIfType<[mxv16i32, mxv16f32],
+           CCAssignToReg<[ZAS0, ZAS1, ZAS2, ZAS3]>>,
+
+  CCIfType<[mxv4i64, mxv4f64],
+           CCAssignToReg<[ZAD0, ZAD1, ZAD2, ZAD3, ZAD4, ZAD5, ZAD6, ZAD7]>>,
+
+  CCIfType<[mxv1i128],
+           CCAssignToReg<[ZAQ0, ZAQ1, ZAQ2, ZAQ3, ZAQ4, ZAQ5, ZAQ6, ZAQ7, ZAQ8,
+                          ZAQ9, ZAQ10, ZAQ11, ZAQ12, ZAQ13, ZAQ14, ZAQ15]>>,
+
   // Handle i1, i8, i16, i32, i64, f32, f64 and v2f64 by passing in registers,
   // up to eight each of GPR and FPR.
   CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
@@ -150,7 +166,23 @@ def RetCC_AArch64_AAPCS : CallingConv<[
            CCAssignToReg<[Z0, Z1, Z2, Z3, Z4, Z5, Z6, Z7]>>,
 
   CCIfType<[nxv2i1, nxv4i1, nxv8i1, nxv16i1],
-           CCAssignToReg<[P0, P1, P2, P3]>>
+           CCAssignToReg<[P0, P1, P2, P3]>>,
+
+  CCIfType<[mxv256i8],
+           CCAssignToReg<[ZAB0]>>,
+
+  CCIfType<[mxv64i16],
+           CCAssignToReg<[ZAH0, ZAH1]>>,
+
+  CCIfType<[mxv16i32, mxv16f32],
+           CCAssignToReg<[ZAS0, ZAS1, ZAS2, ZAS3]>>,
+
+  CCIfType<[mxv4i64, mxv4f64],
+           CCAssignToReg<[ZAD0, ZAD1, ZAD2, ZAD3, ZAD4, ZAD5, ZAD6, ZAD7]>>,
+
+  CCIfType<[mxv1i128],
+           CCAssignToReg<[ZAQ0, ZAQ1, ZAQ2, ZAQ3, ZAQ4, ZAQ5, ZAQ6, ZAQ7, ZAQ8,
+                          ZAQ9, ZAQ10, ZAQ11, ZAQ12, ZAQ13, ZAQ14, ZAQ15]>>,
 ]>;
 
 // Vararg functions on windows pass floats in integer registers

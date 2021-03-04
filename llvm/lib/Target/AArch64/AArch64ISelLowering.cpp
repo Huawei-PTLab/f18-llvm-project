@@ -6012,6 +6012,18 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       CallConv = CallingConv::AArch64_SVE_VectorCall;
   }
 
+  // Check callee args/return for SME registers and set calling convention
+  if (CallConv == CallingConv::C) {
+    bool CalleeOutSME = any_of(
+        Outs, [](ISD::OutputArg &Out) { return Out.VT.isScalableMatrix(); });
+
+    bool CalleeInSME =
+        any_of(Ins, [](ISD::InputArg &In) { return In.VT.isScalableMatrix(); });
+
+    if (CalleeInSME || CalleeOutSME)
+	    CallConv = CallingConv::AArch64_SME_MatrixCall;
+  }
+
   if (IsTailCall) {
     // Check if it's really possible to do a tail call.
     IsTailCall = isEligibleForTailCallOptimization(
