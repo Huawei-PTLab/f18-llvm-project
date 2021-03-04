@@ -235,7 +235,7 @@ namespace llvm {
 
     /// Return true if the size is a power-of-two number of bytes.
     bool isRound() const {
-      if (isScalableVector())
+      if (isScalableVector() || isScalableMatrix())
         return false;
       unsigned BitSize = getSizeInBits();
       return BitSize >= 8 && !(BitSize & (BitSize - 1));
@@ -274,6 +274,8 @@ namespace llvm {
       if (EVT::operator==(VT)) return false;
       assert(isScalableVector() == VT.isScalableVector() &&
              "Comparison between scalable and fixed types");
+      assert(isScalableMatrix() == VT.isScalableMatrix() &&
+             "Comparison between incompatible types");
       return knownBitsGT(VT);
     }
 
@@ -282,6 +284,8 @@ namespace llvm {
       if (EVT::operator==(VT)) return true;
       assert(isScalableVector() == VT.isScalableVector() &&
              "Comparison between scalable and fixed types");
+      assert(isScalableMatrix() == VT.isScalableMatrix() &&
+             "Comparison between incompatible types");
       return knownBitsGE(VT);
     }
 
@@ -290,6 +294,8 @@ namespace llvm {
       if (EVT::operator==(VT)) return false;
       assert(isScalableVector() == VT.isScalableVector() &&
              "Comparison between scalable and fixed types");
+      assert(isScalableMatrix() == VT.isScalableMatrix() &&
+             "Comparison between incompatible types");
       return knownBitsLT(VT);
     }
 
@@ -298,6 +304,8 @@ namespace llvm {
       if (EVT::operator==(VT)) return true;
       assert(isScalableVector() == VT.isScalableVector() &&
              "Comparison between scalable and fixed types");
+      assert(isScalableMatrix() == VT.isScalableMatrix() &&
+             "Comparison between incompatible types");
       return knownBitsLE(VT);
     }
 
@@ -351,10 +359,19 @@ namespace llvm {
 
     // Given a matrix type, return the type of each element.
     EVT getMatrixElementType() const {
-      assert(isScalableMatrix() && "Invalid matrix type");
-      if (isSimple())
-        return V.getVectorElementType();
-      return getExtendedMatrixElementType();
+      assert(isScalableMatrix() && isSimple() && "Invalid matrix type");
+      return V.getVectorElementType();
+    }
+
+    // Given a (possibly scalable) matrix type, return the ElementCount.
+    ElementCount getMatrixElementCount() const {
+      assert(isScalableMatrix() && isSimple() && "Invalid matrix type");
+      return V.getMatrixElementCount();
+    }
+
+    /// Given a matrix type, return the minimum number of elements it contains.
+    unsigned getMatrixMinNumElements() const {
+      return getMatrixElementCount().getKnownMinValue();
     }
 
     /// Return the size of the specified value type in bits.

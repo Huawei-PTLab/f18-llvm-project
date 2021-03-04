@@ -889,6 +889,15 @@ namespace llvm {
       return getVectorMinNumElements();
     }
 
+    ElementCount getMatrixElementCount() const {
+      return ElementCount::get(getVectorNumElements(), isScalableMatrix());
+    }
+
+    /// Given a matrix type, return the minimum number of elements it contains.
+    unsigned getMatrixMinNumElements() const {
+      return getMatrixElementCount().getKnownMinValue();
+    }
+
     /// Returns the size of the specified MVT in bits.
     ///
     /// If the value type is a scalable vector type, the scalable property will
