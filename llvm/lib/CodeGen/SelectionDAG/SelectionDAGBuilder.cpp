@@ -490,6 +490,16 @@ static void getCopyToParts(SelectionDAG &DAG, const SDLoc &DL, SDValue Val,
     return getCopyToPartsVector(DAG, DL, Val, Parts, NumParts, PartVT, V,
                                 CallConv);
 
+  // Handle the matrix case. Currently support is limited.
+  if (ValueVT.isScalableMatrix()) {
+    EVT PartEVT = PartVT;
+    assert(NumParts == 1 && "cannot break scalable matrix into parts");
+    assert(ValueVT == PartEVT &&
+           "unsupported cast, widening, or truncation for scalable matrix");
+    Parts[0] = Val;
+    return;
+  }
+
   unsigned PartBits = PartVT.getSizeInBits();
   unsigned OrigNumParts = NumParts;
   assert(DAG.getTargetLoweringInfo().isTypeLegal(PartVT) &&
