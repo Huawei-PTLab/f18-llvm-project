@@ -4591,6 +4591,7 @@ bool SROAPass::runOnAlloca(AllocaInst &AI) {
   // Skip alloca forms that this analysis can't handle.
   auto *AT = AI.getAllocatedType();
   if (AI.isArrayAllocation() || !AT->isSized() || isa<ScalableVectorType>(AT) ||
+      isa<ScalableMatrixType>(AT) ||
       DL.getTypeAllocSize(AT).getFixedSize() == 0)
     return false;
 
