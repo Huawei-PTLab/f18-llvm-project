@@ -3890,14 +3890,26 @@ ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
     return SVE_INT_ELTTY(64, 2, true, 4);
   case BuiltinType::SveUint64x4:
     return SVE_INT_ELTTY(64, 2, false, 4);
+  case BuiltinType::SmeInt8:
+    return SVE_INT_ELTTY(8, 256, true, 1);
+  case BuiltinType::SmeUint8:
+    return SVE_INT_ELTTY(8, 256, false, 1);
+  case BuiltinType::SmeInt16:
+    return SVE_INT_ELTTY(16, 64, true, 1);
+  case BuiltinType::SmeUint16:
+    return SVE_INT_ELTTY(16, 64, false, 1);
   case BuiltinType::SmeInt32:
     return SVE_INT_ELTTY(32, 16, true, 1);
-  case BuiltinType::SmeInt64:
-    return SVE_INT_ELTTY(64, 4, true, 1);
   case BuiltinType::SmeUint32:
     return SVE_INT_ELTTY(32, 16, false, 1);
+  case BuiltinType::SmeInt64:
+    return SVE_INT_ELTTY(64, 4, true, 1);
   case BuiltinType::SmeUint64:
     return SVE_INT_ELTTY(64, 4, false, 1);
+  case BuiltinType::SmeInt128:
+    return SVE_INT_ELTTY(128, 1, true, 1);
+  case BuiltinType::SmeUint128:
+    return SVE_INT_ELTTY(128, 1, false, 1);
   case BuiltinType::SveBool:
     return SVE_ELTTY(BoolTy, 16, 1);
   case BuiltinType::SveFloat16:
@@ -3932,6 +3944,14 @@ ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
     return SVE_ELTTY(BFloat16Ty, 8, 3);
   case BuiltinType::SveBFloat16x4:
     return SVE_ELTTY(BFloat16Ty, 8, 4);
+  case BuiltinType::SmeFloat16:
+    return SVE_ELTTY(HalfTy, 64, 1);
+  case BuiltinType::SmeFloat32:
+    return SVE_ELTTY(FloatTy, 16, 1);
+  case BuiltinType::SmeFloat64:
+    return SVE_ELTTY(DoubleTy, 4, 1);
+  case BuiltinType::SmeBFloat16:
+    return SVE_ELTTY(BFloat16Ty, 64, 1);
 #define RVV_VECTOR_TYPE_INT(Name, Id, SingletonId, NumEls, ElBits, NF,         \
                             IsSigned)                                          \
   case BuiltinType::Id:                                                        \

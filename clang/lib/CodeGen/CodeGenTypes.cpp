@@ -596,10 +596,20 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
                                            Info.EC.getKnownMinValue() *
                                                Info.NumVectors);
     }
+    case BuiltinType::SmeInt8:
+    case BuiltinType::SmeInt16:
     case BuiltinType::SmeInt32:
     case BuiltinType::SmeInt64:
+    case BuiltinType::SmeInt128:
+    case BuiltinType::SmeUint8:
+    case BuiltinType::SmeUint16:
     case BuiltinType::SmeUint32:
-    case BuiltinType::SmeUint64: {
+    case BuiltinType::SmeUint64:
+    case BuiltinType::SmeUint128:
+    case BuiltinType::SmeFloat16:
+    case BuiltinType::SmeFloat32:
+    case BuiltinType::SmeFloat64:
+    case BuiltinType::SmeBFloat16: {
       ASTContext::BuiltinVectorTypeInfo Info =
           Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(Ty));
       return llvm::ScalableMatrixType::get(ConvertType(Info.ElementType),

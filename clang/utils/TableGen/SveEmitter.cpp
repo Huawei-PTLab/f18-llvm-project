@@ -384,7 +384,10 @@ std::string SVEType::builtin_str() const {
       S += "Wi";
       TileSize = 4;
       break;
-    case 128: S += "LLLi"; break;
+    case 128:
+      S += "LLLi";
+      TileSize = 1;
+      break;
     default: llvm_unreachable("Unhandled case!");
     }
   else if (isFloat())
@@ -1123,10 +1126,19 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "typedef __SVUint32_t svuint32_t;\n";
   OS << "typedef __SVUint64_t svuint64_t;\n";
   OS << "typedef __SVFloat16_t svfloat16_t;\n\n";
+  OS << "typedef __SMInt8_t smint8_t;\n";
+  OS << "typedef __SMInt16_t smint16_t;\n";
   OS << "typedef __SMInt32_t smint32_t;\n";
   OS << "typedef __SMInt64_t smint64_t;\n";
+  OS << "typedef __SMInt128_t smint128_t;\n";
+  OS << "typedef __SMUint8_t smuint8_t;\n";
+  OS << "typedef __SMUint16_t smuint16_t;\n";
   OS << "typedef __SMUint32_t smuint32_t;\n";
-  OS << "typedef __SMUint64_t smuint64_t;\n\n";
+  OS << "typedef __SMUint64_t smuint64_t;\n";
+  OS << "typedef __SMUint128_t smuint128_t;\n";
+  OS << "typedef __SMFloat16_t smfloat16_t;\n";
+  OS << "typedef __SMFloat32_t smfloat32_t;\n";
+  OS << "typedef __SMFloat64_t smfloat64_t;\n\n";
 
   OS << "#if defined(__ARM_FEATURE_SVE_BF16) && "
         "!defined(__ARM_FEATURE_BF16_SCALAR_ARITHMETIC)\n";
@@ -1136,6 +1148,7 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
 
   OS << "#if defined(__ARM_FEATURE_SVE_BF16)\n";
   OS << "typedef __SVBFloat16_t svbfloat16_t;\n";
+  OS << "typedef __SMBFloat16_t smbfloat16_t;\n";
   OS << "#endif\n\n";
 
   OS << "#if defined(__ARM_FEATURE_BF16_SCALAR_ARITHMETIC)\n";
