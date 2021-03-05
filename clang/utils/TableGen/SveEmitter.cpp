@@ -392,9 +392,18 @@ std::string SVEType::builtin_str() const {
     }
   else if (isFloat())
     switch (ElementBitwidth) {
-    case 16: S += "h"; break;
-    case 32: S += "f"; break;
-    case 64: S += "d"; break;
+    case 16:
+      S += "h";
+      TileSize = 64;
+      break;
+    case 32:
+      S += "f";
+      TileSize = 16;
+      break;
+    case 64:
+      S += "d";
+      TileSize = 4;
+      break;
     default: llvm_unreachable("Unhandled case!");
     }
   else if (isBFloat()) {

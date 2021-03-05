@@ -150,6 +150,8 @@ def EltTyBool32  : EltType<10>;
 def EltTyBool64  : EltType<11>;
 def EltTyBFloat16 : EltType<12>;
 
+def EltTyInt128  : EltType<13>;
+
 class MemEltType<int val> {
   int Value = val;
 }
@@ -768,6 +770,14 @@ multiclass SInstZaPPZ<string name, string types, string intrinsic, list<FlagType
 
 defm SMADDHA  : SInstZaPPZ<"smaddha",  "ilUiUl", "aarch64_sme_addha", [IsSME, IsOverloadRetLast]>;
 defm SMADDVA  : SInstZaPPZ<"smaddva",  "ilUiUl", "aarch64_sme_addva", [IsSME, IsOverloadRetLast]>;
+
+// Non-widening FMOPA/FMOPS
+multiclass SInstZaPPZZ<string name, string types, string intrinsic, list<FlagType> flags=[]> {
+  def _M : SInst<name # "[_{d}]",  "yPPydd", types, MergeOp1, intrinsic, flags>;
+}
+defm SMMOPA : SInstZaPPZZ<"smmopa", "fd", "aarch64_sme_fmopa", [IsSME, IsOverloadRetLast]>;
+defm SMMOPS : SInstZaPPZZ<"smmops", "fd", "aarch64_sme_fmops", [IsSME, IsOverloadRetLast]>;
+
 
 //------------------------------------------------------------------------------
 
