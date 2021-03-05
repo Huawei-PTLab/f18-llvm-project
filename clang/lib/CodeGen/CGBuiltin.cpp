@@ -9083,6 +9083,10 @@ SmallVector<llvm::Type *, 2> CodeGenFunction::getSMEOverloadTypes(
 
   llvm::Type *DefaultType = getSMEType(TypeFlags);
 
+  // Used for widening mopa/mops and addha/addva intrinsics.
+  if (TypeFlags.isOverloadRetLast())
+    return {ResultType, Ops.back()->getType()};
+
   assert(TypeFlags.isOverloadDefault() && "Unexpected value for overloads");
   return {DefaultType};
 }

@@ -206,6 +206,7 @@ def IsTupleCreate             : FlagType<0x100000000>;
 def IsTupleGet                : FlagType<0x200000000>;
 def IsTupleSet                : FlagType<0x400000000>;
 def IsSME                     : FlagType<0x800000000>; // Is an SME intrinsic
+def IsOverloadRetLast         : FlagType<0x1000000000>; // Use {ReturnType, typeof(last operand)} as overload types.
 
 // These must be kept in sync with the flags in include/clang/Basic/TargetBuiltins.h
 class ImmCheckType<int val> {
