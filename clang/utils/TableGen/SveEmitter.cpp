@@ -374,8 +374,14 @@ std::string SVEType::builtin_str() const {
   else if (!isFloatingPoint())
     switch (ElementBitwidth) {
     case 1: S += "b"; break;
-    case 8: S += "c"; break;
-    case 16: S += "s"; break;
+    case 8:
+      S += "c";
+      TileSize = 256;
+      break;
+    case 16:
+      S += "s";
+      TileSize = 64;
+      break;
     case 32:
       S += "i";
       TileSize = 16;
@@ -409,6 +415,7 @@ std::string SVEType::builtin_str() const {
   else if (isBFloat()) {
     assert(ElementBitwidth == 16 && "Not a valid BFloat.");
     S += "y";
+    TileSize = 64;
   }
 
   if (!isFloatingPoint()) {
@@ -829,6 +836,13 @@ void SVEType::applyModifier(char Mod) {
     break;
   case 'y':
     Bitwidth = ElementBitwidth;
+    ScalableMatrix = true;
+    break;
+  case '&':
+    Predicate = false;
+    Float = true;
+    BFloat = false;
+    ElementBitwidth = 32;
     ScalableMatrix = true;
     break;
   default:

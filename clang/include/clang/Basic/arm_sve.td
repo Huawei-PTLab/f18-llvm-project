@@ -78,6 +78,7 @@
 // o: 4x width elements, 1/4 element count
 //
 // y: matrix of default type
+// &: matrix of float type
 //
 // w: vector of element type promoted to 64bits, vector maintains
 //    signedness of its element type.
@@ -778,6 +779,12 @@ multiclass SInstZaPPZZ<string name, string types, string intrinsic, list<FlagTyp
 defm SMMOPA : SInstZaPPZZ<"smmopa", "fd", "aarch64_sme_fmopa", [IsSME, IsOverloadRetLast]>;
 defm SMMOPS : SInstZaPPZZ<"smmops", "fd", "aarch64_sme_fmops", [IsSME, IsOverloadRetLast]>;
 
+// Widening FMOPA/FMOPS
+multiclass SInstSMEF32PPZZ<string name, string types, string intrinsic, list<FlagType> flags=[]> {
+  def _M : SInst<name # "[_f32_{d}]", "&PP&dd", types, MergeOp1, intrinsic, flags>;
+}
+defm SMOPA_wide : SInstSMEF32PPZZ<"smmopa", "hb", "aarch64_sme_fmopa", [IsSME, IsOverloadRetLast]>;
+defm SMOPS_wide : SInstSMEF32PPZZ<"smmops", "hb", "aarch64_sme_fmops", [IsSME, IsOverloadRetLast]>;
 
 //------------------------------------------------------------------------------
 
