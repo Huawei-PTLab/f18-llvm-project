@@ -1149,6 +1149,8 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "typedef __SVUint32_t svuint32_t;\n";
   OS << "typedef __SVUint64_t svuint64_t;\n";
   OS << "typedef __SVFloat16_t svfloat16_t;\n\n";
+
+  OS << "#if defined(__ARM_FEATURE_SME)\n";
   OS << "typedef __SMInt8_t smint8_t;\n";
   OS << "typedef __SMInt16_t smint16_t;\n";
   OS << "typedef __SMInt32_t smint32_t;\n";
@@ -1159,9 +1161,11 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "typedef __SMUint32_t smuint32_t;\n";
   OS << "typedef __SMUint64_t smuint64_t;\n";
   OS << "typedef __SMUint128_t smuint128_t;\n";
+  OS << "typedef __SMBFloat16_t smbfloat16_t;\n";
   OS << "typedef __SMFloat16_t smfloat16_t;\n";
   OS << "typedef __SMFloat32_t smfloat32_t;\n";
-  OS << "typedef __SMFloat64_t smfloat64_t;\n\n";
+  OS << "typedef __SMFloat64_t smfloat64_t;\n";
+  OS << "#endif\n\n";
 
   OS << "#if defined(__ARM_FEATURE_SVE_BF16) && "
         "!defined(__ARM_FEATURE_BF16_SCALAR_ARITHMETIC)\n";
@@ -1169,9 +1173,9 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
         "__ARM_FEATURE_SVE_BF16 is defined\"\n";
   OS << "#endif\n\n";
 
-  OS << "#if defined(__ARM_FEATURE_SVE_BF16)\n";
+  OS << "#if defined(__ARM_FEATURE_SVE_BF16) || "
+        "defined(__ARM_FEATURE_SME)\n";
   OS << "typedef __SVBFloat16_t svbfloat16_t;\n";
-  OS << "typedef __SMBFloat16_t smbfloat16_t;\n";
   OS << "#endif\n\n";
 
   OS << "#if defined(__ARM_FEATURE_BF16_SCALAR_ARITHMETIC)\n";
@@ -1216,7 +1220,8 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "typedef __clang_svfloat64x4_t svfloat64x4_t;\n";
   OS << "typedef __SVBool_t  svbool_t;\n\n";
 
-  OS << "#ifdef __ARM_FEATURE_SVE_BF16\n";
+  OS << "#if defined(__ARM_FEATURE_SVE_BF16) || "
+        "defined(__ARM_FEATURE_SME)\n";
   OS << "typedef __clang_svbfloat16x2_t svbfloat16x2_t;\n";
   OS << "typedef __clang_svbfloat16x3_t svbfloat16x3_t;\n";
   OS << "typedef __clang_svbfloat16x4_t svbfloat16x4_t;\n";
@@ -1272,19 +1277,22 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
         const bool IsBFloat = StringRef(From.Suffix).equals("bf16") ||
                               StringRef(To.Suffix).equals("bf16");
         if (IsBFloat)
-          OS << "#if defined(__ARM_FEATURE_SVE_BF16)\n";
+          OS << "#if defined(__ARM_FEATURE_SVE_BF16) || "
+                "defined(__ARM_FEATURE_SME)\n";
         if (ShortForm) {
           OS << "__aio " << From.Type << " svreinterpret_" << From.Suffix;
           OS << "(" << To.Type << " op) {\n";
           OS << "  return __builtin_sve_reinterpret_" << From.Suffix << "_"
              << To.Suffix << "(op);\n";
-          OS << "}\n\n";
+          OS << "}\n";
         } else
           OS << "#define svreinterpret_" << From.Suffix << "_" << To.Suffix
              << "(...) __builtin_sve_reinterpret_" << From.Suffix << "_"
              << To.Suffix << "(__VA_ARGS__)\n";
         if (IsBFloat)
-          OS << "#endif /* #if defined(__ARM_FEATURE_SVE_BF16) */\n";
+          OS << "#endif /* __ARM_FEATURE_SVE_BF16 || __ARM_FEATURE_SME */\n";
+        if (ShortForm)
+          OS << "\n";
       }
 
   SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
@@ -1323,10 +1331,11 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   if (!InGuard.empty())
     OS << "#endif  //" << InGuard << "\n";
 
-  OS << "#if defined(__ARM_FEATURE_SVE_BF16)\n";
+  OS << "#if defined(__ARM_FEATURE_SVE_BF16) || "
+        "defined(__ARM_FEATURE_SME)\n";
   OS << "#define svcvtnt_bf16_x      svcvtnt_bf16_m\n";
   OS << "#define svcvtnt_bf16_f32_x  svcvtnt_bf16_f32_m\n";
-  OS << "#endif /*__ARM_FEATURE_SVE_BF16 */\n\n";
+  OS << "#endif /*__ARM_FEATURE_SVE_BF16 || __ARM_FEATURE_SME */\n\n";
 
   OS << "#if defined(__ARM_FEATURE_SVE2)\n";
   OS << "#define svcvtnt_f16_x      svcvtnt_f16_m\n";

@@ -325,6 +325,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasSVE2 && HasSVE2SM4)
     Builder.defineMacro("__ARM_FEATURE_SVE2_SM4", "1");
 
+  if (HasSME)
+    Builder.defineMacro("__ARM_FEATURE_SME", "1");
+
   if (HasCRC)
     Builder.defineMacro("__ARM_FEATURE_CRC32", "1");
 
@@ -492,7 +495,7 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
          ((Feature == "sve" || Feature == "sve2" || Feature == "sve2-bitperm" ||
            Feature == "sve2-aes" || Feature == "sve2-sha3" ||
            Feature == "sve2-sm4" || Feature == "f64mm" || Feature == "f32mm" ||
-           Feature == "i8mm" || Feature == "bf16") &&
+           Feature == "i8mm" || Feature == "bf16" || Feature == "sme") &&
           (FPU & SveMode)) ||
          (Feature == "ls64" && HasLS64);
 }
@@ -521,6 +524,7 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   HasSVE2SHA3 = false;
   HasSVE2SM4 = false;
   HasSVE2BitPerm = false;
+  HasSME = false;
   HasMatmulFP64 = false;
   HasMatmulFP32 = false;
   HasLSE = false;
@@ -570,6 +574,13 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     if (Feature == "+f64mm") {
       FPU |= SveMode;
       HasMatmulFP64 = true;
+    }
+    if (Feature == "+sme") {
+      FPU |= SveMode;
+      HasFullFP16 = true;
+      HasBFloat16 = true;
+      HasSVE2 = true;
+      HasSME = true;
     }
     if (Feature == "+crc")
       HasCRC = true;

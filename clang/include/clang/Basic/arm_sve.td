@@ -769,22 +769,30 @@ multiclass SInstZaPPZ<string name, string types, string intrinsic, list<FlagType
   def _M : SInst<name # "[_{d}]",  "yPPyd", types, MergeOp1, intrinsic, flags>;
 }
 
-defm SMADDHA  : SInstZaPPZ<"smaddha",  "ilUiUl", "aarch64_sme_addha", [IsSME, IsOverloadRetLast]>;
-defm SMADDVA  : SInstZaPPZ<"smaddva",  "ilUiUl", "aarch64_sme_addva", [IsSME, IsOverloadRetLast]>;
+let ArchGuard = "defined(__ARM_FEATURE_SME)" in {
+  defm SMADDHA  : SInstZaPPZ<"smaddha",  "ilUiUl", "aarch64_sme_addha", [IsSME, IsOverloadRetLast]>;
+  defm SMADDVA  : SInstZaPPZ<"smaddva",  "ilUiUl", "aarch64_sme_addva", [IsSME, IsOverloadRetLast]>;
+}
 
 // Non-widening FMOPA/FMOPS
 multiclass SInstZaPPZZ<string name, string types, string intrinsic, list<FlagType> flags=[]> {
   def _M : SInst<name # "[_{d}]",  "yPPydd", types, MergeOp1, intrinsic, flags>;
 }
-defm SMMOPA : SInstZaPPZZ<"smmopa", "fd", "aarch64_sme_fmopa", [IsSME, IsOverloadRetLast]>;
-defm SMMOPS : SInstZaPPZZ<"smmops", "fd", "aarch64_sme_fmops", [IsSME, IsOverloadRetLast]>;
+
+let ArchGuard = "defined(__ARM_FEATURE_SME)" in {
+  defm SMMOPA : SInstZaPPZZ<"smmopa", "fd", "aarch64_sme_fmopa", [IsSME, IsOverloadRetLast]>;
+  defm SMMOPS : SInstZaPPZZ<"smmops", "fd", "aarch64_sme_fmops", [IsSME, IsOverloadRetLast]>;
+}
 
 // Widening FMOPA/FMOPS
 multiclass SInstSMEF32PPZZ<string name, string types, string intrinsic, list<FlagType> flags=[]> {
   def _M : SInst<name # "[_f32_{d}]", "&PP&dd", types, MergeOp1, intrinsic, flags>;
 }
-defm SMOPA_wide : SInstSMEF32PPZZ<"smmopa", "hb", "aarch64_sme_fmopa", [IsSME, IsOverloadRetLast]>;
-defm SMOPS_wide : SInstSMEF32PPZZ<"smmops", "hb", "aarch64_sme_fmops", [IsSME, IsOverloadRetLast]>;
+
+let ArchGuard = "defined(__ARM_FEATURE_SME)" in {
+  defm SMOPA_wide : SInstSMEF32PPZZ<"smmopa", "hb", "aarch64_sme_fmopa", [IsSME, IsOverloadRetLast]>;
+  defm SMOPS_wide : SInstSMEF32PPZZ<"smmops", "hb", "aarch64_sme_fmops", [IsSME, IsOverloadRetLast]>;
+}
 
 //------------------------------------------------------------------------------
 
