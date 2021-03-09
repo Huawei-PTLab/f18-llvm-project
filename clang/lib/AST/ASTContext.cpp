@@ -3973,23 +3973,8 @@ ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
 /// type.
 QualType ASTContext::getScalableVectorType(QualType EltTy,
                                            unsigned NumElts) const {
-  // This needs to be fixed in the future by separating out the SME parts as
-  // "__clang_svint32x4_t" and ""__SMInt32_t" are treated the same here where
-  // EltTySize = 32 and NumElts = 16.
-  if (Target->hasAArch64SVETypes() || Target->hasAArch64SMETypes()) {
+  if (Target->hasAArch64SVETypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);
-#define SME_VECTOR_TYPE(Name, MangledName, Id, SingletonId, NumEls, ElBits,    \
-                        IsSigned, IsFP, IsBF)                                  \
-  if (!EltTy->isBooleanType() &&                                               \
-      ((EltTy->hasIntegerRepresentation() &&                                   \
-        EltTy->hasSignedIntegerRepresentation() == IsSigned) ||                \
-       (EltTy->hasFloatingRepresentation() && !EltTy->isBFloat16Type() &&      \
-        IsFP && !IsBF) ||                                                      \
-       (EltTy->hasFloatingRepresentation() && EltTy->isBFloat16Type() &&       \
-        IsBF && !IsFP)) &&                                                     \
-      EltTySize == ElBits && NumElts == NumEls) {                              \
-    return SingletonId;                                                        \
-  }
 #define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId, NumEls, ElBits,    \
                         IsSigned, IsFP, IsBF)                                  \
   if (!EltTy->isBooleanType() &&                                               \
@@ -4005,7 +3990,6 @@ QualType ASTContext::getScalableVectorType(QualType EltTy,
 #define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId, NumEls)         \
   if (EltTy->isBooleanType() && NumElts == NumEls)                             \
     return SingletonId;
-#include "clang/Basic/AArch64SMEACLETypes.def"
 #include "clang/Basic/AArch64SVEACLETypes.def"
   } else if (Target->hasRISCVVTypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);
@@ -4021,6 +4005,30 @@ QualType ASTContext::getScalableVectorType(QualType EltTy,
     if (EltTy->isBooleanType() && NumElts == NumEls)                           \
       return SingletonId;
 #include "clang/Basic/RISCVVTypes.def"
+  }
+  return QualType();
+}
+
+/// getScalableMatrixType - Return the unique reference to a scalable matrix
+/// type of the specified element type and size. VectorType must be a built-in
+/// type.
+QualType ASTContext::getScalableMatrixType(QualType EltTy,
+                                           unsigned NumElts) const {
+  if (Target->hasAArch64SMETypes()) {
+    uint64_t EltTySize = getTypeSize(EltTy);
+#define SME_VECTOR_TYPE(Name, MangledName, Id, SingletonId, NumEls, ElBits,    \
+                        IsSigned, IsFP, IsBF)                                  \
+  if (!EltTy->isBooleanType() &&                                               \
+      ((EltTy->hasIntegerRepresentation() &&                                   \
+        EltTy->hasSignedIntegerRepresentation() == IsSigned) ||                \
+       (EltTy->hasFloatingRepresentation() && !EltTy->isBFloat16Type() &&      \
+        IsFP && !IsBF) ||                                                      \
+       (EltTy->hasFloatingRepresentation() && EltTy->isBFloat16Type() &&       \
+        IsBF && !IsFP)) &&                                                     \
+      EltTySize == ElBits && NumElts == NumEls) {                              \
+    return SingletonId;                                                        \
+  }
+#include "clang/Basic/AArch64SMEACLETypes.def"
   }
   return QualType();
 }
@@ -10697,6 +10705,19 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
     assert(!RequiresICE && "Can't require vector ICE");
 
     Type = Context.getScalableVectorType(ElementType, NumElements);
+    break;
+  }
+  case 'm': {
+    char *End;
+    unsigned NumElements = strtoul(Str, &End, 10);
+    assert(End != Str && "Missing vector size");
+    Str = End;
+
+    QualType ElementType =
+        DecodeTypeFromStr(Str, Context, Error, RequiresICE, false);
+    assert(!RequiresICE && "Can't require vector ICE");
+
+    Type = Context.getScalableMatrixType(ElementType, NumElements);
     break;
   }
   case 'V': {

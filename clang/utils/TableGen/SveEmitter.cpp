@@ -444,7 +444,7 @@ std::string SVEType::builtin_str() const {
 
   // Fix this in the future.
   if (isScalableMatrix())
-    return "q" + utostr(TileSize) + S;
+    return "m" + utostr(TileSize) + S;
 
   assert(isScalableVector() && "Unsupported type");
   return "q" + utostr(getNumElements() * NumVectors) + S;
