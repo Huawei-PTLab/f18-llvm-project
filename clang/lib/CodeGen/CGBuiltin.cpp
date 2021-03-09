@@ -9102,6 +9102,9 @@ SmallVector<llvm::Type *, 2> CodeGenFunction::getSMEOverloadTypes(
   if (TypeFlags.isOverloadRetLast())
     return {ResultType, Ops.back()->getType()};
 
+  if (TypeFlags.isSMELoad())
+    return {ResultType};
+
   assert(TypeFlags.isOverloadDefault() && "Unexpected value for overloads");
   return {DefaultType};
 }

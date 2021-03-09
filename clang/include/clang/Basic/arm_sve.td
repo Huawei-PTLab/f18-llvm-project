@@ -212,6 +212,7 @@ def IsTupleGet                : FlagType<0x200000000>;
 def IsTupleSet                : FlagType<0x400000000>;
 def IsSME                     : FlagType<0x800000000>; // Is an SME intrinsic
 def IsOverloadRetLast         : FlagType<0x1000000000>; // Use {ReturnType, typeof(last operand)} as overload types.
+def IsSMELoad                 : FlagType<0x2000000000>;
 
 // These must be kept in sync with the flags in include/clang/Basic/TargetBuiltins.h
 class ImmCheckType<int val> {
@@ -794,6 +795,23 @@ let ArchGuard = "defined(__ARM_FEATURE_SME)" in {
   defm SMOPS_wide : SInstSMEF32PPZZ<"smmops", "hb", "aarch64_sme_fmops", [IsSME, IsOverloadRetLast]>;
 }
 
+let ArchGuard = "defined(__ARM_FEATURE_SME)" in {
+  def SMLD1H   : MInst<"smld1h[_{d}]", "yPPync", "csilUcUsUiUlhfd", [IsSME, IsSMELoad], MemEltTyDefault, "aarch64_sme_ld1">;
+  def SMLD1V   : MInst<"smld1v[_{d}]", "yPPync", "csilUcUsUiUlhfd", [IsSME, IsSMELoad], MemEltTyDefault, "aarch64_sme_ld1">;
+  def SMST1H   : MInst<"smst1h[_{d}]", "vPPynp", "csilUcUsUiUlhfd", [IsSME], MemEltTyDefault, "aarch64_sme_st1">;
+  def SMST1V   : MInst<"smst1v[_{d}]", "vPPynp", "csilUcUsUiUlhfd", [IsSME], MemEltTyDefault, "aarch64_sme_st1">;
+
+  def SMMOVAH : SInst<"smmovah[_{d}]", "yPynd", "csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_movah", [IsSME]>;
+  def SMMOVAV : SInst<"smmovav[_{d}]", "yPynd", "csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_movav", [IsSME]>;
+
+  def SMMOVAH_VEC: SInst<"smmovah[_vec_{d}]", "dPyn","csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_movah_vec", [IsSME]>;
+  def SMMOVAV_VEC: SInst<"smmovav[_vec_{d}]", "dPyn","csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_movav_vec", [IsSME]>;
+
+  def SMSTART : SInst<"smstart", "vi", "", MergeNone, "aarch64_sme_start", [IsSME, IsOverloadNone]>;
+  def SMSTOP : SInst<"smstop", "vi", "", MergeNone, "aarch64_sme_stop", [IsSME, IsOverloadNone]>;
+
+  def SMZERO : SInst<"smzero_{d}", "y", "csilUcUsUiUlhfd", MergeNone, "aarch64_sme_zero", [IsSME]>;
+}
 //------------------------------------------------------------------------------
 
 multiclass SInstZPZZ<string name, string types, string intrinsic, list<FlagType> flags=[]> {
