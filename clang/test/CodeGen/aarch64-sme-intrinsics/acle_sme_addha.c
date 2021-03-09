@@ -1,6 +1,6 @@
 // REQUIRES: aarch64-registered-target
-// RUN: %clang -emit-llvm -S -target aarch64-none-linux-gnu -O1 -march=armv8-a+sve+sme -o - %s | FileCheck %s
-// RUN: %clang -emit-llvm -S -DSVE_OVERLOADED_FORMS -target aarch64-none-linux-gnu -O1 -march=armv8-a+sve+sme -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -fallow-half-arguments-and-returns -S -O1 -Werror -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -DSME_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sme -fallow-half-arguments-and-returns -S -O1 -Werror -emit-llvm -o - %s | FileCheck %s
 
 #include <arm_sve.h>
 
