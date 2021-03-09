@@ -1560,6 +1560,61 @@ class SME_2VectorArg_Pred_Intrinsic
                 ],
                 [IntrNoMem]>;
 
+class SME_Load_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anymatrix_ty],
+                [
+                  LLVMMatrixPredicate<0>, // Pg
+                  LLVMMatchType<0>,       // Matrix
+                  llvm_i32_ty,            // Wv
+                  llvm_i32_ty,            // Offset
+                  LLVMPointerToElt<0>     // [Xn, Xm, LSL #Imm]
+                ],
+                [IntrReadMem, IntrArgMemOnly]>;
+
+class SME_Store_Intrinsic
+    : DefaultAttrsIntrinsic<[],
+                [
+                  LLVMMatrixPredicate<0>, // Pg
+                  llvm_anymatrix_ty,      // Matrix
+                  llvm_i32_ty,            // Wv
+                  llvm_i32_ty,            // Offset
+                  LLVMPointerToElt<0>     // [Xn, Xm, LSL #Imm]
+                ],
+                [IntrWriteMem, IntrArgMemOnly, NoCapture<ArgIndex<4>>]>;
+
+class SME_Mov_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anymatrix_ty],
+                [
+                  LLVMScalarOrSameVectorWidth<1, llvm_i1_ty>, // Pg
+                  LLVMMatchType<0>,                           // Matrix
+                  llvm_i32_ty,                                // Wv
+                  llvm_i32_ty,                                // Offset
+                  llvm_anyvector_ty                           // Vector
+                ],
+                [IntrNoMem]>;
+
+class SME_Mov_Vec_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],              // Vector
+                [
+                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, // Pg
+                  llvm_anymatrix_ty,                          // Matrix
+                  llvm_i32_ty,                                // Wv
+                  llvm_i32_ty                                 // Offset
+                ],
+                [IntrNoMem]>;
+
+class SME_Switch_Intrinsic
+    : DefaultAttrsIntrinsic<[],
+                [
+                  llvm_i32_ty
+                ],
+                [IntrNoMem, IntrHasSideEffects]>;
+
+class SME_Zero_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anymatrix_ty],
+                [],
+                [IntrNoMem, IntrHasSideEffects]>;
+
 //
 // Vector tuple creation intrinsics (ACLE)
 //
@@ -2601,6 +2656,15 @@ def int_aarch64_sme_usmops : SME_2VectorArg_Pred_Intrinsic;
 def int_aarch64_sme_umopa  : SME_2VectorArg_Pred_Intrinsic;
 def int_aarch64_sme_umops  : SME_2VectorArg_Pred_Intrinsic;
 
+def int_aarch64_sme_movah : SME_Mov_Intrinsic;
+def int_aarch64_sme_movav : SME_Mov_Intrinsic;
+def int_aarch64_sme_movah_vec : SME_Mov_Vec_Intrinsic;
+def int_aarch64_sme_movav_vec : SME_Mov_Vec_Intrinsic;
+def int_aarch64_sme_start : SME_Switch_Intrinsic;
+def int_aarch64_sme_stop  : SME_Switch_Intrinsic;
+def int_aarch64_sme_zero  : SME_Zero_Intrinsic;
+def int_aarch64_sme_ld1   : SME_Load_Intrinsic;
+def int_aarch64_sme_st1   : SME_Store_Intrinsic;
 }
 
 //
