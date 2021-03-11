@@ -213,6 +213,7 @@ def IsTupleSet                : FlagType<0x400000000>;
 def IsSME                     : FlagType<0x800000000>; // Is an SME intrinsic
 def IsOverloadRetLast         : FlagType<0x1000000000>; // Use {ReturnType, typeof(last operand)} as overload types.
 def IsSMELoad                 : FlagType<0x2000000000>;
+def IsSMEMova                 : FlagType<0x4000000000>;
 
 // These must be kept in sync with the flags in include/clang/Basic/TargetBuiltins.h
 class ImmCheckType<int val> {
@@ -801,8 +802,8 @@ let ArchGuard = "defined(__ARM_FEATURE_SME)" in {
   def SMST1H   : MInst<"smst1h[_{d}]", "vPPynp", "csilUcUsUiUlhfd", [IsSME], MemEltTyDefault, "aarch64_sme_st1_row">;
   def SMST1V   : MInst<"smst1v[_{d}]", "vPPynp", "csilUcUsUiUlhfd", [IsSME], MemEltTyDefault, "aarch64_sme_st1_col">;
 
-  def SMMOVAH : SInst<"smmovah[_{d}]", "yPynd", "csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_mova_row", [IsSME]>;
-  def SMMOVAV : SInst<"smmovav[_{d}]", "yPynd", "csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_mova_col", [IsSME]>;
+  def SMMOVAH : SInst<"smmovah[_{d}]", "yPymd", "csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_mova_row", [IsSME, IsSMEMova]>;
+  def SMMOVAV : SInst<"smmovav[_{d}]", "yPymd", "csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_mova_col", [IsSME, IsSMEMova]>;
 
   def SMMOVAH_VEC: SInst<"smmovah[_vec_{d}]", "dPyn","csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_mova_vec_row", [IsSME]>;
   def SMMOVAV_VEC: SInst<"smmovav[_vec_{d}]", "dPyn","csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_mova_vec_col", [IsSME]>;

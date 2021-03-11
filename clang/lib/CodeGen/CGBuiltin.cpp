@@ -8736,6 +8736,23 @@ Value *CodeGenFunction::EmitSVEPredicateCast(Value *Pred,
   return C;
 }
 
+Value *CodeGenFunction::EmitSMEMova(SVETypeFlags TypeFlags,
+                                    SmallVectorImpl<Value *> &Ops,
+                                    unsigned IntID) {
+  auto *ResultTy = getSMEType(TypeFlags);
+
+  // Emit a predicate cast as svbool_t that maps to <vscale x 16 x i1> type by
+  // default. However, the predicates need to be compatible with the actual SME
+  // type.
+  Ops[0] = EmitSMEPredicateCast(Ops[0], ResultTy);
+  // While the ACLE does not currently accept an offset, the LLVM intrinsic
+  // still expects an offset as the fourth argument. So, we pass 0 of the
+  // llvm_i64_ty type.
+  Ops.insert(&Ops[3], ConstantInt::get(Int64Ty, 0));
+  Function *F = CGM.getIntrinsic(IntID, ResultTy);
+  return Builder.CreateCall(F, Ops);
+}
+
 Value *CodeGenFunction::EmitSVEGatherLoad(const SVETypeFlags &TypeFlags,
                                           SmallVectorImpl<Value *> &Ops,
                                           unsigned IntID) {
@@ -9105,6 +9122,9 @@ SmallVector<llvm::Type *, 2> CodeGenFunction::getSMEOverloadTypes(
   if (TypeFlags.isSMELoad())
     return {ResultType};
 
+  if (TypeFlags.isSMEMova())
+    return {Ops[1]->getType(), Ops[4]->getType()};
+
   assert(TypeFlags.isOverloadDefault() && "Unexpected value for overloads");
   return {DefaultType};
 }
@@ -9190,6 +9210,8 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
 		return EmitSVEStructStore(TypeFlags, Ops, Builtin->LLVMIntrinsic);
   else if (TypeFlags.isUndef())
     return UndefValue::get(Ty);
+  else if (TypeFlags.isSMEMova())
+    return EmitSMEMova(TypeFlags, Ops, Builtin->LLVMIntrinsic);
   else if (Builtin->LLVMIntrinsic != 0) {
     if (TypeFlags.getMergeType() == SVETypeFlags::MergeZeroExp)
       InsertExplicitZeroOperand(Builder, Ty, Ops);

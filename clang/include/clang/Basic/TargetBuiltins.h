@@ -279,6 +279,7 @@ namespace clang {
     bool isSME() const { return Flags & IsSME; }
     bool isOverloadRetLast() const { return Flags & IsOverloadRetLast; }
     bool isSMELoad() const { return Flags & IsSMELoad; }
+    bool isSMEMova() const { return Flags & IsSMEMova; }
 
     uint64_t getBits() const { return Flags; }
     bool isFlagSet(uint64_t Flag) const { return Flags & Flag; }
