@@ -845,6 +845,10 @@ void SVEType::applyModifier(char Mod) {
     ElementBitwidth = 32;
     ScalableMatrix = true;
     break;
+  case '?':
+    ElementBitwidth *= 4;
+    ScalableMatrix = true;
+    break;
   default:
     llvm_unreachable("Unhandled character!");
   }
@@ -917,6 +921,8 @@ std::string Intrinsic::replaceTemplatedArgs(std::string Name, TypeSpec TS,
     case '1':
     case '2':
     case '3':
+    case '4':
+    case '5':
       T = SVEType(TS, Proto[C - '0']);
       break;
     }

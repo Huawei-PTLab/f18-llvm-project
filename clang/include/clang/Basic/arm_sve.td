@@ -79,6 +79,7 @@
 //
 // y: matrix of default type
 // &: matrix of float type
+// ?: matrix of 4x width signed elements
 //
 // w: vector of element type promoted to 64bits, vector maintains
 //    signedness of its element type.
@@ -782,8 +783,8 @@ multiclass SInstZaPPZZ<string name, string types, string intrinsic, list<FlagTyp
 }
 
 let ArchGuard = "defined(__ARM_FEATURE_SME)" in {
-  defm SMMOPA : SInstZaPPZZ<"smmopa", "fd", "aarch64_sme_fmopa", [IsSME, IsOverloadRetLast]>;
-  defm SMMOPS : SInstZaPPZZ<"smmops", "fd", "aarch64_sme_fmops", [IsSME, IsOverloadRetLast]>;
+  defm FMOPA : SInstZaPPZZ<"smmopa", "fd", "aarch64_sme_fmopa", [IsSME, IsOverloadRetLast]>;
+  defm FMOPS : SInstZaPPZZ<"smmops", "fd", "aarch64_sme_fmops", [IsSME, IsOverloadRetLast]>;
 }
 
 // Widening FMOPA/FMOPS
@@ -792,21 +793,29 @@ multiclass SInstSMEF32PPZZ<string name, string types, string intrinsic, list<Fla
 }
 
 let ArchGuard = "defined(__ARM_FEATURE_SME)" in {
-  defm SMOPA_wide : SInstSMEF32PPZZ<"smmopa", "hb", "aarch64_sme_fmopa", [IsSME, IsOverloadRetLast]>;
-  defm SMOPS_wide : SInstSMEF32PPZZ<"smmops", "hb", "aarch64_sme_fmops", [IsSME, IsOverloadRetLast]>;
+  defm FMOPA_wide : SInstSMEF32PPZZ<"smmopa", "hb", "aarch64_sme_fmopa", [IsSME, IsOverloadRetLast]>;
+  defm FMOPS_wide : SInstSMEF32PPZZ<"smmops", "hb", "aarch64_sme_fmops", [IsSME, IsOverloadRetLast]>;
 }
 
 let ArchGuard = "defined(__ARM_FEATURE_SME)" in {
-  def SMLD1H   : MInst<"smld1h[_{d}]", "yPPync", "csilUcUsUiUlhfd", [IsSME, IsSMELoad], MemEltTyDefault, "aarch64_sme_ld1_row">;
-  def SMLD1V   : MInst<"smld1v[_{d}]", "yPPync", "csilUcUsUiUlhfd", [IsSME, IsSMELoad], MemEltTyDefault, "aarch64_sme_ld1_col">;
-  def SMST1H   : MInst<"smst1h[_{d}]", "vPPynp", "csilUcUsUiUlhfd", [IsSME], MemEltTyDefault, "aarch64_sme_st1_row">;
-  def SMST1V   : MInst<"smst1v[_{d}]", "vPPynp", "csilUcUsUiUlhfd", [IsSME], MemEltTyDefault, "aarch64_sme_st1_col">;
+  def SMLD1H : MInst<"smld1h[_{d}]", "yPPync", "csilUcUsUiUlhfd", [IsSME, IsSMELoad], MemEltTyDefault, "aarch64_sme_ld1_row">;
+  def SMLD1V : MInst<"smld1v[_{d}]", "yPPync", "csilUcUsUiUlhfd", [IsSME, IsSMELoad], MemEltTyDefault, "aarch64_sme_ld1_col">;
+  def SMST1H : MInst<"smst1h[_{d}]", "vPPynp", "csilUcUsUiUlhfd", [IsSME], MemEltTyDefault, "aarch64_sme_st1_row">;
+  def SMST1V : MInst<"smst1v[_{d}]", "vPPynp", "csilUcUsUiUlhfd", [IsSME], MemEltTyDefault, "aarch64_sme_st1_col">;
 
   def SMMOVAH : SInst<"smmovah[_{d}]", "yPymd", "csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_mova_row", [IsSME, IsSMEMova]>;
   def SMMOVAV : SInst<"smmovav[_{d}]", "yPymd", "csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_mova_col", [IsSME, IsSMEMova]>;
 
   def SMMOVAH_VEC: SInst<"smmovah[_vec_{d}]", "dPyn","csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_mova_vec_row", [IsSME]>;
   def SMMOVAV_VEC: SInst<"smmovav[_vec_{d}]", "dPyn","csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_mova_vec_col", [IsSME]>;
+
+  def SMOPA : SInst<"smmopa[_{0}_{d}]", "?PP?dd", "csUcUs", MergeOp1, "aarch64_sme_smopa", [IsSME, IsOverloadRetLast]>;
+  def SMOPS : SInst<"smmops[_{0}_{d}]", "?PP?dd", "csUcUs", MergeOp1, "aarch64_sme_smops", [IsSME, IsOverloadRetLast]>;
+
+  def SUMOPA : SInst<"smmopa[_{0}_{d}_{5}]", "?PP?du", "cs", MergeOp1, "aarch64_sme_sumopa", [IsSME, IsOverloadRetLast]>;
+  def SUMOPS : SInst<"smmops[_{0}_{d}_{5}]", "?PP?du", "cs", MergeOp1, "aarch64_sme_sumops", [IsSME, IsOverloadRetLast]>;
+  def USMOPA : SInst<"smmopa[_{0}_{4}_{d}]", "?PP?ud", "cs", MergeOp1, "aarch64_sme_usmopa", [IsSME, IsOverloadRetLast]>;
+  def USMOPS : SInst<"smmops[_{0}_{4}_{d}]", "?PP?ud", "cs", MergeOp1, "aarch64_sme_usmops", [IsSME, IsOverloadRetLast]>;
 
   def SMSTART : SInst<"smstart", "vi", "", MergeNone, "aarch64_sme_start", [IsSME, IsOverloadNone]>;
   def SMSTOP : SInst<"smstop", "vi", "", MergeNone, "aarch64_sme_stop", [IsSME, IsOverloadNone]>;
