@@ -796,16 +796,16 @@ let ArchGuard = "defined(__ARM_FEATURE_SME)" in {
 }
 
 let ArchGuard = "defined(__ARM_FEATURE_SME)" in {
-  def SMLD1H   : MInst<"smld1h[_{d}]", "yPPync", "csilUcUsUiUlhfd", [IsSME, IsSMELoad], MemEltTyDefault, "aarch64_sme_ld1">;
-  def SMLD1V   : MInst<"smld1v[_{d}]", "yPPync", "csilUcUsUiUlhfd", [IsSME, IsSMELoad], MemEltTyDefault, "aarch64_sme_ld1">;
-  def SMST1H   : MInst<"smst1h[_{d}]", "vPPynp", "csilUcUsUiUlhfd", [IsSME], MemEltTyDefault, "aarch64_sme_st1">;
-  def SMST1V   : MInst<"smst1v[_{d}]", "vPPynp", "csilUcUsUiUlhfd", [IsSME], MemEltTyDefault, "aarch64_sme_st1">;
+  def SMLD1H   : MInst<"smld1h[_{d}]", "yPPync", "csilUcUsUiUlhfd", [IsSME, IsSMELoad], MemEltTyDefault, "aarch64_sme_ld1_row">;
+  def SMLD1V   : MInst<"smld1v[_{d}]", "yPPync", "csilUcUsUiUlhfd", [IsSME, IsSMELoad], MemEltTyDefault, "aarch64_sme_ld1_col">;
+  def SMST1H   : MInst<"smst1h[_{d}]", "vPPynp", "csilUcUsUiUlhfd", [IsSME], MemEltTyDefault, "aarch64_sme_st1_row">;
+  def SMST1V   : MInst<"smst1v[_{d}]", "vPPynp", "csilUcUsUiUlhfd", [IsSME], MemEltTyDefault, "aarch64_sme_st1_col">;
 
-  def SMMOVAH : SInst<"smmovah[_{d}]", "yPynd", "csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_movah", [IsSME]>;
-  def SMMOVAV : SInst<"smmovav[_{d}]", "yPynd", "csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_movav", [IsSME]>;
+  def SMMOVAH : SInst<"smmovah[_{d}]", "yPynd", "csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_mova_row", [IsSME]>;
+  def SMMOVAV : SInst<"smmovav[_{d}]", "yPynd", "csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_mova_col", [IsSME]>;
 
-  def SMMOVAH_VEC: SInst<"smmovah[_vec_{d}]", "dPyn","csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_movah_vec", [IsSME]>;
-  def SMMOVAV_VEC: SInst<"smmovav[_vec_{d}]", "dPyn","csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_movav_vec", [IsSME]>;
+  def SMMOVAH_VEC: SInst<"smmovah[_vec_{d}]", "dPyn","csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_mova_vec_row", [IsSME]>;
+  def SMMOVAV_VEC: SInst<"smmovav[_vec_{d}]", "dPyn","csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_mova_vec_col", [IsSME]>;
 
   def SMSTART : SInst<"smstart", "vi", "", MergeNone, "aarch64_sme_start", [IsSME, IsOverloadNone]>;
   def SMSTOP : SInst<"smstop", "vi", "", MergeNone, "aarch64_sme_stop", [IsSME, IsOverloadNone]>;

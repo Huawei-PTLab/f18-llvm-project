@@ -2656,15 +2656,19 @@ def int_aarch64_sme_usmops : SME_2VectorArg_Pred_Intrinsic;
 def int_aarch64_sme_umopa  : SME_2VectorArg_Pred_Intrinsic;
 def int_aarch64_sme_umops  : SME_2VectorArg_Pred_Intrinsic;
 
-def int_aarch64_sme_movah : SME_Mov_Intrinsic;
-def int_aarch64_sme_movav : SME_Mov_Intrinsic;
-def int_aarch64_sme_movah_vec : SME_Mov_Vec_Intrinsic;
-def int_aarch64_sme_movav_vec : SME_Mov_Vec_Intrinsic;
+def int_aarch64_sme_mova_row : SME_Mov_Intrinsic;
+def int_aarch64_sme_mova_col : SME_Mov_Intrinsic;
+def int_aarch64_sme_mova_vec_row : SME_Mov_Vec_Intrinsic;
+def int_aarch64_sme_mova_vec_col : SME_Mov_Vec_Intrinsic;
 def int_aarch64_sme_start : SME_Switch_Intrinsic;
 def int_aarch64_sme_stop  : SME_Switch_Intrinsic;
 def int_aarch64_sme_zero  : SME_Zero_Intrinsic;
-def int_aarch64_sme_ld1   : SME_Load_Intrinsic;
-def int_aarch64_sme_st1   : SME_Store_Intrinsic;
+
+def int_aarch64_sme_ld1_row : SME_Load_Intrinsic;
+def int_aarch64_sme_ld1_col : SME_Load_Intrinsic;
+
+def int_aarch64_sme_st1_row : SME_Store_Intrinsic;
+def int_aarch64_sme_st1_col : SME_Store_Intrinsic;
 }
 
 //
