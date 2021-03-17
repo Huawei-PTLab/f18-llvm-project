@@ -308,8 +308,13 @@ DecodeStatus AArch64Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
     }
     case AArch64::LD1_MXIPXX_H_B:
     case AArch64::LD1_MXIPXX_V_B:
+      MI.insert(MI.begin(), MCOperand::createReg(AArch64::ZAB0));
+      MI.insert(MI.begin(), MCOperand::createReg(AArch64::ZAB0));
+      break;
     case AArch64::ST1_MXIPXX_H_B:
     case AArch64::ST1_MXIPXX_V_B:
+      MI.insert(MI.begin(), MCOperand::createReg(AArch64::ZAB0));
+      break;
     case AArch64::INSERT_MXIPZ_H_B:
     case AArch64::INSERT_MXIPZ_V_B:
       // e.g.
@@ -325,9 +330,12 @@ DecodeStatus AArch64Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
       break;
     case AArch64::LD1_MXIPXX_H_Q:
     case AArch64::LD1_MXIPXX_V_Q:
+      // 128-bit load have implicit zero vector index.
+      MI.insert(MI.begin()+3, MCOperand::createImm(0));
+      break;
     case AArch64::ST1_MXIPXX_H_Q:
     case AArch64::ST1_MXIPXX_V_Q:
-      // 128-bit load/store have implicit zero vector index.
+      // 128-bit store have implicit zero vector index.
       MI.insert(MI.begin()+2, MCOperand::createImm(0));
       break;
     // 128-bit mova have implicit zero vector index.

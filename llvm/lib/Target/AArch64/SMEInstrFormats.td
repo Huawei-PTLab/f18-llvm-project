@@ -214,6 +214,7 @@ class sme_mem_ld_ss_base<bit Q, bit V, bits<2> msz, dag outs, dag ins,
   let Inst{4}     = 0b0;
 
   let mayLoad = 1;
+  let Constraints = "$ZAt = $_ZAt";
 }
 
 class sme_mem_ld_ss_inst<bit Q, bits<2> msz, string mnemonic,
@@ -221,7 +222,7 @@ class sme_mem_ld_ss_inst<bit Q, bits<2> msz, string mnemonic,
                          Operand imm_ty, RegisterOperand gpr_ty>
     : sme_mem_ld_ss_base<
         Q, is_col, msz, (outs tile_ty:$ZAt),
-        (ins MatrixIndexGPR32Op12_15:$Rv, imm_ty:$imm, PPR3bAny:$Pg, GPR64sp:$Rn,
+        (ins tile_ty:$_ZAt, MatrixIndexGPR32Op12_15:$Rv, imm_ty:$imm, PPR3bAny:$Pg, GPR64sp:$Rn,
              gpr_ty:$Rm),
         mnemonic, "\t\\{$ZAt[$Rv, $imm]\\}, $Pg/z, [$Rn, $Rm]">;
 
