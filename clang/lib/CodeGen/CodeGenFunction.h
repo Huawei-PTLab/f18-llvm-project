@@ -4201,6 +4201,9 @@ public:
   llvm::Value *EmitSMEMova(SVETypeFlags TypeFlags,
                            llvm::SmallVectorImpl<llvm::Value *> &Ops,
                            unsigned IntID);
+  llvm::Value *EmitSMEMode(SVETypeFlags TypeFlags,
+                           llvm::SmallVectorImpl<llvm::Value *> &Ops,
+                           unsigned IntID);
   llvm::Value *EmitSVEGatherLoad(const SVETypeFlags &TypeFlags,
                                  llvm::SmallVectorImpl<llvm::Value *> &Ops,
                                  unsigned IntID);

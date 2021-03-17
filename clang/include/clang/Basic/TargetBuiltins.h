@@ -280,6 +280,8 @@ namespace clang {
     bool isOverloadRetLast() const { return Flags & IsOverloadRetLast; }
     bool isSMELoad() const { return Flags & IsSMELoad; }
     bool isSMEMova() const { return Flags & IsSMEMova; }
+    bool isFirstArgZero() const { return Flags & IsFirstArgZero; }
+    bool isFirstArgOne() const { return Flags & IsFirstArgOne; }
 
     uint64_t getBits() const { return Flags; }
     bool isFlagSet(uint64_t Flag) const { return Flags & Flag; }

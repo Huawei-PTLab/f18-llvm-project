@@ -8753,6 +8753,17 @@ Value *CodeGenFunction::EmitSMEMova(SVETypeFlags TypeFlags,
   return Builder.CreateCall(F, Ops);
 }
 
+Value *CodeGenFunction::EmitSMEMode(SVETypeFlags TypeFlags,
+                                    SmallVectorImpl<Value *> &Ops,
+                                    unsigned IntID) {
+  // While za variants of smstart and smstop are provided at the ACLE intrinsic
+  // level (smenableza, smdisableza), we still need to pass in an i32 0 or i32 1
+  // to the llvm intrinsic to differentiate between them.
+  Ops.push_back(ConstantInt::get(Int32Ty, TypeFlags.isFirstArgOne() ? 1 : 0));
+  Function *F = CGM.getIntrinsic(IntID, {});
+  return Builder.CreateCall(F, Ops);
+}
+
 Value *CodeGenFunction::EmitSVEGatherLoad(const SVETypeFlags &TypeFlags,
                                           SmallVectorImpl<Value *> &Ops,
                                           unsigned IntID) {
@@ -9212,6 +9223,8 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
     return UndefValue::get(Ty);
   else if (TypeFlags.isSMEMova())
     return EmitSMEMova(TypeFlags, Ops, Builtin->LLVMIntrinsic);
+  else if (TypeFlags.isFirstArgZero() || TypeFlags.isFirstArgOne())
+    return EmitSMEMode(TypeFlags, Ops, Builtin->LLVMIntrinsic);
   else if (Builtin->LLVMIntrinsic != 0) {
     if (TypeFlags.getMergeType() == SVETypeFlags::MergeZeroExp)
       InsertExplicitZeroOperand(Builder, Ty, Ops);

@@ -215,6 +215,8 @@ def IsSME                     : FlagType<0x800000000>; // Is an SME intrinsic
 def IsOverloadRetLast         : FlagType<0x1000000000>; // Use {ReturnType, typeof(last operand)} as overload types.
 def IsSMELoad                 : FlagType<0x2000000000>;
 def IsSMEMova                 : FlagType<0x4000000000>;
+def IsFirstArgZero            : FlagType<0x8000000000>;
+def IsFirstArgOne             : FlagType<0x10000000000>;
 
 // These must be kept in sync with the flags in include/clang/Basic/TargetBuiltins.h
 class ImmCheckType<int val> {
@@ -817,8 +819,10 @@ let ArchGuard = "defined(__ARM_FEATURE_SME)" in {
   def USMOPA : SInst<"smmopa[_{0}_{4}_{d}]", "?PP?ud", "cs", MergeOp1, "aarch64_sme_usmopa", [IsSME, IsOverloadRetLast]>;
   def USMOPS : SInst<"smmops[_{0}_{4}_{d}]", "?PP?ud", "cs", MergeOp1, "aarch64_sme_usmops", [IsSME, IsOverloadRetLast]>;
 
-  def SMSTART : SInst<"smstart", "vi", "", MergeNone, "aarch64_sme_start", [IsSME, IsOverloadNone]>;
-  def SMSTOP : SInst<"smstop", "vi", "", MergeNone, "aarch64_sme_stop", [IsSME, IsOverloadNone]>;
+  def SMSTART    : SInst<"smstart", "v", "", MergeNone, "aarch64_sme_start", [IsSME, IsFirstArgZero, IsOverloadNone]>;
+  def SMSTART_ZA : SInst<"smenableza", "v", "", MergeNone, "aarch64_sme_start", [IsSME, IsFirstArgOne, IsOverloadNone]>;
+  def SMSTOP     : SInst<"smstop", "v", "", MergeNone, "aarch64_sme_stop", [IsSME, IsFirstArgOne, IsOverloadNone]>;
+  def SMSTOP_ZA  : SInst<"smdisableza", "v", "", MergeNone, "aarch64_sme_stop", [IsSME, IsFirstArgZero, IsOverloadNone]>;
 
   def SMZERO : SInst<"smzero_{d}", "y", "csilUcUsUiUlhfd", MergeNone, "aarch64_sme_zero", [IsSME]>;
 }
