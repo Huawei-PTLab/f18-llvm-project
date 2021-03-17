@@ -141,6 +141,12 @@ def : InstAlias<"smstop",     (MSRpstatesvcrImm1 0b011, 0b0)>;
 def : InstAlias<"smstop sm",  (MSRpstatesvcrImm1 0b001, 0b0)>;
 def : InstAlias<"smstop za",  (MSRpstatesvcrImm1 0b010, 0b0)>;
 
+def : Pat<(int_aarch64_sme_start (i32 0)), (MSRpstatesvcrImm1 0b011, 0b1)>;
+def : Pat<(int_aarch64_sme_start (i32 1)), (MSRpstatesvcrImm1 0b010, 0b1)>;
+def : Pat<(int_aarch64_sme_stop (i32 0)), (MSRpstatesvcrImm1 0b010, 0b0)>;
+def : Pat<(int_aarch64_sme_stop (i32 1)), (MSRpstatesvcrImm1 0b011, 0b0)>;
+
+
 //===----------------------------------------------------------------------===//
 // SVE2 instructions
 //===----------------------------------------------------------------------===//
