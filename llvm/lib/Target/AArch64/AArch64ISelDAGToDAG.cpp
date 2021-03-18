@@ -1530,26 +1530,36 @@ void AArch64DAGToDAGISel::SelectPredicatedMatrixLoad(SDNode *N, unsigned Opc) {
   // Extend the immediate part of the vector selector to i64 for encoding.
   SDValue Imm = N->getOperand(5);
   assert(Imm.getValueType().getSimpleVT().SimpleTy == MVT::i32);
+  assert((VT != MVT::mxv1i128 || N->getConstantOperandVal(5) == 0) &&
+         "Unexpected row/column stride in 128-bit SME load");
   Imm = CurDAG->getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Imm);
 
   // Fit the address operand into the am_sve_regreg_lsl* addressing mode.
-  unsigned Scale = 3; // TODO: type-dependent LSL scale
+  unsigned Scale = 0;
+  if (VT == MVT::mxv256i8)
+    Scale = 0;
+  else if (VT == MVT::mxv64i16)
+    Scale = 1;
+  else if (VT == MVT::mxv16i32 || VT == MVT::mxv16f32)
+    Scale = 2;
+  else if (VT == MVT::mxv4i64 || VT == MVT::mxv4f64)
+    Scale = 3;
+  else if (VT == MVT::mxv1i128)
+    Scale = 4;
+  else
+    llvm_unreachable("Invalid matrix size");
   SDValue Base = N->getOperand(6);
   SDValue Offset = CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL,
                                           AArch64::XZR, MVT::i64);
   SelectSVERegRegAddrMode(N->getOperand(6), Scale, Base, Offset);
 
   // Create the machine node. No further changes will be applied.
-  SDValue Ops[] = {N->getOperand(3), // $_ZAt
-                   N->getOperand(4), // $Wv
-                   Imm,              // $imm
-                   N->getOperand(2), // $Pg
-                   Base,             // $Xn
-                   Offset,           // $Xm
-                   Chain};
+  SmallVector<SDValue, 7> Ops;
+  Ops.append({N->getOperand(3), N->getOperand(4)});    // $_ZAt, $Wv
+  Ops.push_back(Imm);                                  // $Imm
+  Ops.append({N->getOperand(2), Base, Offset, Chain}); // $Pg, $Xn, $Xm
   const EVT ResTys[] = {VT, MVT::Other};
   SDNode *Load = CurDAG->getMachineNode(Opc, DL, ResTys, Ops);
-
   ReplaceNode(N, Load);
 }
 
@@ -1600,29 +1610,42 @@ void AArch64DAGToDAGISel::SelectPredicatedStore(SDNode *N, unsigned NumVecs,
 
 void AArch64DAGToDAGISel::SelectPredicatedMatrixStore(SDNode *N, unsigned Opc) {
   SDLoc DL(N);
+  SDValue Chain = N->getOperand(0);
+  SDValue Matrix = N->getOperand(3);
+  EVT VT = Matrix.getValueType();
 
   // Extend the immediate part of the vector selector to i64 for encoding.
   SDValue Imm = N->getOperand(5);
   assert(Imm.getValueType().getSimpleVT().SimpleTy == MVT::i32);
+  assert((VT != MVT::mxv1i128 || N->getConstantOperandVal(5) == 0) &&
+         "Unexpected row/column stride in 128-bit SME load");
   Imm = CurDAG->getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Imm);
 
   // Fit the address operand into the am_sve_regreg_lsl* addressing mode.
-  unsigned Scale = 3; // TODO: type-dependent LSL scale
+  unsigned Scale = 0;
+  if (VT == MVT::mxv256i8)
+    Scale = 0;
+  else if (VT == MVT::mxv64i16)
+    Scale = 1;
+  else if (VT == MVT::mxv16i32 || VT == MVT::mxv16f32)
+    Scale = 2;
+  else if (VT == MVT::mxv4i64 || VT == MVT::mxv4f64)
+    Scale = 3;
+  else if (VT == MVT::mxv1i128)
+    Scale = 4;
+  else
+    llvm_unreachable("Invalid matrix size");
   SDValue Base = N->getOperand(6);
   SDValue Offset = CurDAG->getCopyFromReg(CurDAG->getEntryNode(), DL,
                                           AArch64::XZR, MVT::i64);
   SelectSVERegRegAddrMode(N->getOperand(6), Scale, Base, Offset);
 
   // Create the machine node. No further changes will be applied.
-  SDValue Ops[] = {N->getOperand(3),  // $_ZAt
-                   N->getOperand(4),  // $Wv
-                   Imm,               // $imm
-                   N->getOperand(2),  // $Pg
-                   Base,              // $Xn
-                   Offset,            // $Xm
-                   N->getOperand(0)}; // Chain
+  SmallVector<SDValue, 7> Ops;
+  Ops.append({Matrix, N->getOperand(4)});              // $_ZAt, $Wv
+  Ops.push_back(Imm);                                  // $Imm
+  Ops.append({N->getOperand(2), Base, Offset, Chain}); // $Pg, $Xn, $Xm
   SDNode *Store = CurDAG->getMachineNode(Opc, DL, N->getValueType(0), Ops);
-
   ReplaceNode(N, Store);
 }
 
@@ -4021,15 +4044,39 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       break;
     }
     case Intrinsic::aarch64_sme_ld1_row: {
-      if (VT == MVT::mxv4i64) {
+      if (VT == MVT::mxv256i8) {
+        SelectPredicatedMatrixLoad(Node, AArch64::LD1_MXIPXX_H_B);
+        return;
+      } else if (VT == MVT::mxv64i16) {
+        SelectPredicatedMatrixLoad(Node, AArch64::LD1_MXIPXX_H_H);
+        return;
+      } else if (VT == MVT::mxv16i32 || VT == MVT::mxv16f32) {
+        SelectPredicatedMatrixLoad(Node, AArch64::LD1_MXIPXX_H_S);
+        return;
+      } else if (VT == MVT::mxv4i64 || VT == MVT::mxv4f64) {
         SelectPredicatedMatrixLoad(Node, AArch64::LD1_MXIPXX_H_D);
+        return;
+      } else if (VT == MVT::mxv1i128) {
+        SelectPredicatedMatrixLoad(Node, AArch64::LD1_MXIPXX_H_Q);
         return;
       }
       break;
     }
     case Intrinsic::aarch64_sme_ld1_col: {
-      if (VT == MVT::mxv4i64) {
+      if (VT == MVT::mxv256i8) {
+        SelectPredicatedMatrixLoad(Node, AArch64::LD1_MXIPXX_V_B);
+        return;
+      } else if (VT == MVT::mxv64i16) {
+        SelectPredicatedMatrixLoad(Node, AArch64::LD1_MXIPXX_V_H);
+        return;
+      } else if (VT == MVT::mxv16i32 || VT == MVT::mxv16f32) {
+        SelectPredicatedMatrixLoad(Node, AArch64::LD1_MXIPXX_V_S);
+        return;
+      } else if (VT == MVT::mxv4i64 || VT == MVT::mxv4f64) {
         SelectPredicatedMatrixLoad(Node, AArch64::LD1_MXIPXX_V_D);
+        return;
+      } else if (VT == MVT::mxv1i128) {
+        SelectPredicatedMatrixLoad(Node, AArch64::LD1_MXIPXX_V_Q);
         return;
       }
       break;
@@ -4391,16 +4438,40 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     }
     case Intrinsic::aarch64_sme_st1_row: {
       VT = Node->getOperand(3).getValueType();
-      if (VT == MVT::mxv4i64) {
+      if (VT == MVT::mxv256i8) {
+        SelectPredicatedMatrixStore(Node, AArch64::ST1_MXIPXX_H_B);
+        return;
+      } else if (VT == MVT::mxv64i16) {
+        SelectPredicatedMatrixStore(Node, AArch64::ST1_MXIPXX_H_H);
+        return;
+      } else if (VT == MVT::mxv16i32 || VT == MVT::mxv16f32) {
+        SelectPredicatedMatrixStore(Node, AArch64::ST1_MXIPXX_H_S);
+        return;
+      } else if (VT == MVT::mxv4i64 || VT == MVT::mxv4f64) {
         SelectPredicatedMatrixStore(Node, AArch64::ST1_MXIPXX_H_D);
+        return;
+      } else if (VT == MVT::mxv1i128) {
+        SelectPredicatedMatrixStore(Node, AArch64::ST1_MXIPXX_H_Q);
         return;
       }
       break;
     }
     case Intrinsic::aarch64_sme_st1_col: {
       VT = Node->getOperand(3).getValueType();
-      if (VT == MVT::mxv4i64) {
+      if (VT == MVT::mxv256i8) {
+        SelectPredicatedMatrixStore(Node, AArch64::ST1_MXIPXX_V_B);
+        return;
+      } else if (VT == MVT::mxv64i16) {
+        SelectPredicatedMatrixStore(Node, AArch64::ST1_MXIPXX_V_H);
+        return;
+      } else if (VT == MVT::mxv16i32 || VT == MVT::mxv16f32) {
+        SelectPredicatedMatrixStore(Node, AArch64::ST1_MXIPXX_V_S);
+        return;
+      } else if (VT == MVT::mxv4i64 || VT == MVT::mxv4f64) {
         SelectPredicatedMatrixStore(Node, AArch64::ST1_MXIPXX_V_D);
+        return;
+      } else if (VT == MVT::mxv1i128) {
+        SelectPredicatedMatrixStore(Node, AArch64::ST1_MXIPXX_V_Q);
         return;
       }
       break;
