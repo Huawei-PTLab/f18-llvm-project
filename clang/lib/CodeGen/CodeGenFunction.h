@@ -4198,9 +4198,10 @@ public:
                                     llvm::ScalableVectorType *VTy);
   llvm::Value *EmitSMEPredicateCast(llvm::Value *Pred,
                                     llvm::ScalableMatrixType *VTy);
-  llvm::Value *EmitSMEMova(SVETypeFlags TypeFlags,
-                           llvm::SmallVectorImpl<llvm::Value *> &Ops,
-                           unsigned IntID);
+  llvm::Value *
+  EmitSMEIntrinsicWithOffset(SVETypeFlags TypeFlags,
+                             llvm::SmallVectorImpl<llvm::Value *> &Ops,
+                             unsigned IntID, unsigned ArgNo);
   llvm::Value *EmitSMEMode(SVETypeFlags TypeFlags,
                            llvm::SmallVectorImpl<llvm::Value *> &Ops,
                            unsigned IntID);

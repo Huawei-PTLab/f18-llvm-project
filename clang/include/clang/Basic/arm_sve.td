@@ -215,6 +215,7 @@ def IsSMELoad                 : FlagType<0x2000000000>;
 def IsSMEMova                 : FlagType<0x4000000000>;
 def IsFirstArgZero            : FlagType<0x8000000000>;
 def IsFirstArgOne             : FlagType<0x10000000000>;
+def IsSMEStore                : FlagType<0x20000000000>;
 
 // These must be kept in sync with the flags in include/clang/Basic/TargetBuiltins.h
 class ImmCheckType<int val> {
@@ -798,10 +799,10 @@ let ArchGuard = "defined(__ARM_FEATURE_SME)" in {
 }
 
 let ArchGuard = "defined(__ARM_FEATURE_SME)" in {
-  def SMLD1H : MInst<"smld1h[_{d}]", "yPPync", "csilUcUsUiUlhfd", [IsSME, IsSMELoad], MemEltTyDefault, "aarch64_sme_ld1_row">;
-  def SMLD1V : MInst<"smld1v[_{d}]", "yPPync", "csilUcUsUiUlhfd", [IsSME, IsSMELoad], MemEltTyDefault, "aarch64_sme_ld1_col">;
-  def SMST1H : MInst<"smst1h[_{d}]", "vPPynp", "csilUcUsUiUlhfd", [IsSME], MemEltTyDefault, "aarch64_sme_st1_row">;
-  def SMST1V : MInst<"smst1v[_{d}]", "vPPynp", "csilUcUsUiUlhfd", [IsSME], MemEltTyDefault, "aarch64_sme_st1_col">;
+  def SMLD1H : MInst<"smld1h[_{d}]", "yPPymc", "csilUcUsUiUlhfd", [IsSME, IsSMELoad], MemEltTyDefault, "aarch64_sme_ld1_row">;
+  def SMLD1V : MInst<"smld1v[_{d}]", "yPPymc", "csilUcUsUiUlhfd", [IsSME, IsSMELoad], MemEltTyDefault, "aarch64_sme_ld1_col">;
+  def SMST1H : MInst<"smst1h[_{d}]", "vPPymp", "csilUcUsUiUlhfd", [IsSME, IsSMEStore], MemEltTyDefault, "aarch64_sme_st1_row">;
+  def SMST1V : MInst<"smst1v[_{d}]", "vPPymp", "csilUcUsUiUlhfd", [IsSME, IsSMEStore], MemEltTyDefault, "aarch64_sme_st1_col">;
 
   def SMMOVAH : SInst<"smmovah[_{d}]", "yPymd", "csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_mova_row", [IsSME, IsSMEMova]>;
   def SMMOVAV : SInst<"smmovav[_{d}]", "yPymd", "csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_mova_col", [IsSME, IsSMEMova]>;

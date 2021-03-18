@@ -8734,20 +8734,24 @@ Value *CodeGenFunction::EmitSVEPredicateCast(Value *Pred,
   return C;
 }
 
-Value *CodeGenFunction::EmitSMEMova(SVETypeFlags TypeFlags,
-                                    SmallVectorImpl<Value *> &Ops,
-                                    unsigned IntID) {
+Value *
+CodeGenFunction::EmitSMEIntrinsicWithOffset(SVETypeFlags TypeFlags,
+                                            SmallVectorImpl<Value *> &Ops,
+                                            unsigned IntID, unsigned ArgNo) {
   auto *ResultTy = getSMEType(TypeFlags);
 
   // Emit a predicate cast as svbool_t that maps to <vscale x 16 x i1> type by
   // default. However, the predicates need to be compatible with the actual SME
   // type.
   Ops[0] = EmitSMEPredicateCast(Ops[0], ResultTy);
+  if (TypeFlags.isSMELoad() || TypeFlags.isSMEStore())
+    Ops[1] = EmitSMEPredicateCast(Ops[1], ResultTy);
   // While the ACLE does not currently accept an offset, the LLVM intrinsic
-  // still expects an offset as the fourth argument. So, we pass 0 of the
-  // llvm_i64_ty type.
-  Ops.insert(&Ops[3], ConstantInt::get(Int64Ty, 0));
-  Function *F = CGM.getIntrinsic(IntID, ResultTy);
+  // still expects an offset as argument at ArgNo. So, we pass 0 of the
+  // llvm_i32_ty type.
+  Ops.insert(&Ops[ArgNo], ConstantInt::get(Int32Ty, 0));
+  Function *F =
+      CGM.getIntrinsic(IntID, getSMEOverloadTypes(TypeFlags, ResultTy, Ops));
   return Builder.CreateCall(F, Ops);
 }
 
@@ -9129,7 +9133,10 @@ SmallVector<llvm::Type *, 2> CodeGenFunction::getSMEOverloadTypes(
     return {ResultType, Ops.back()->getType()};
 
   if (TypeFlags.isSMELoad())
-    return {ResultType};
+    return {Ops[2]->getType(), Ops[0]->getType()};
+
+  if (TypeFlags.isSMEStore())
+    return {Ops[0]->getType(), Ops[2]->getType()};
 
   if (TypeFlags.isSMEMova())
     return {Ops[1]->getType(), Ops[4]->getType()};
@@ -9219,8 +9226,12 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
 		return EmitSVEStructStore(TypeFlags, Ops, Builtin->LLVMIntrinsic);
   else if (TypeFlags.isUndef())
     return UndefValue::get(Ty);
+  else if (TypeFlags.isSMELoad() || TypeFlags.isSMEStore())
+    return EmitSMEIntrinsicWithOffset(TypeFlags, Ops, Builtin->LLVMIntrinsic,
+                                      4);
   else if (TypeFlags.isSMEMova())
-    return EmitSMEMova(TypeFlags, Ops, Builtin->LLVMIntrinsic);
+    return EmitSMEIntrinsicWithOffset(TypeFlags, Ops, Builtin->LLVMIntrinsic,
+                                      3);
   else if (TypeFlags.isFirstArgZero() || TypeFlags.isFirstArgOne())
     return EmitSMEMode(TypeFlags, Ops, Builtin->LLVMIntrinsic);
   else if (Builtin->LLVMIntrinsic != 0) {

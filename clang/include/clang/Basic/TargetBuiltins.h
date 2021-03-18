@@ -282,6 +282,7 @@ namespace clang {
     bool isSMEMova() const { return Flags & IsSMEMova; }
     bool isFirstArgZero() const { return Flags & IsFirstArgZero; }
     bool isFirstArgOne() const { return Flags & IsFirstArgOne; }
+    bool isSMEStore() const { return Flags & IsSMEStore; }
 
     uint64_t getBits() const { return Flags; }
     bool isFlagSet(uint64_t Flag) const { return Flags & Flag; }
