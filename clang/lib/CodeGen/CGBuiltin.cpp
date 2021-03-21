@@ -8749,7 +8749,10 @@ CodeGenFunction::EmitSMEIntrinsicWithOffset(SVETypeFlags TypeFlags,
   // While the ACLE does not currently accept an offset, the LLVM intrinsic
   // still expects an offset as argument at ArgNo. So, we pass 0 of the
   // llvm_i32_ty type.
-  Ops.insert(&Ops[ArgNo], ConstantInt::get(Int32Ty, 0));
+  if (Ops.size() == ArgNo)
+    Ops.push_back(ConstantInt::get(Int32Ty, 0));
+  else
+    Ops.insert(&Ops[ArgNo], ConstantInt::get(Int32Ty, 0));
   Function *F =
       CGM.getIntrinsic(IntID, getSMEOverloadTypes(TypeFlags, ResultTy, Ops));
   return Builder.CreateCall(F, Ops);
@@ -9141,6 +9144,11 @@ SmallVector<llvm::Type *, 2> CodeGenFunction::getSMEOverloadTypes(
   if (TypeFlags.isSMEMova())
     return {Ops[1]->getType(), Ops[4]->getType()};
 
+  if (TypeFlags.isSMEMovaVec()) {
+    llvm::Type *VectorResultType = getSVEType(TypeFlags);
+    return {VectorResultType, Ops[1]->getType()};
+  }
+
   assert(TypeFlags.isOverloadDefault() && "Unexpected value for overloads");
   return {DefaultType};
 }
@@ -9229,7 +9237,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   else if (TypeFlags.isSMELoad() || TypeFlags.isSMEStore())
     return EmitSMEIntrinsicWithOffset(TypeFlags, Ops, Builtin->LLVMIntrinsic,
                                       4);
-  else if (TypeFlags.isSMEMova())
+  else if (TypeFlags.isSMEMova() || TypeFlags.isSMEMovaVec())
     return EmitSMEIntrinsicWithOffset(TypeFlags, Ops, Builtin->LLVMIntrinsic,
                                       3);
   else if (TypeFlags.isFirstArgZero() || TypeFlags.isFirstArgOne())
