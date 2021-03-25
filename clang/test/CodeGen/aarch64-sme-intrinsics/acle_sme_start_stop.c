@@ -5,16 +5,9 @@
 
 void test_smstart() {
   // CHECK-LABEL: test_smstart
-  // CHECK: call void @llvm.aarch64.sme.start(i32 0)
-  // CHECK: ret void
-  smstart();
-}
-
-void test_smenableza() {
-  // CHECK-LABEL: test_smenableza
   // CHECK: call void @llvm.aarch64.sme.start(i32 1)
   // CHECK: ret void
-  smenableza();
+  smstart();
 }
 
 void test_smstop() {
@@ -22,11 +15,4 @@ void test_smstop() {
   // CHECK: call void @llvm.aarch64.sme.stop(i32 1)
   // CHECK: ret void
   smstop();
-}
-
-void test_smdisableza() {
-  // CHECK-LABEL: test_smdisableza
-  // CHECK: call void @llvm.aarch64.sme.stop(i32 0)
-  // CHECK: ret void
-  smdisableza();
 }

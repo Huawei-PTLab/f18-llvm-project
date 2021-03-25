@@ -8759,10 +8759,12 @@ CodeGenFunction::EmitSMEIntrinsicWithOffset(SVETypeFlags TypeFlags,
 Value *CodeGenFunction::EmitSMEMode(SVETypeFlags TypeFlags,
                                     SmallVectorImpl<Value *> &Ops,
                                     unsigned IntID) {
-  // While za variants of smstart and smstop are provided at the ACLE intrinsic
-  // level (smenableza, smdisableza), we still need to pass in an i32 0 or i32 1
-  // to the llvm intrinsic to differentiate between them.
-  Ops.push_back(ConstantInt::get(Int32Ty, TypeFlags.isFirstArgOne() ? 1 : 0));
+  // Although we currently only support smstart za and smstop at the ACLE
+  // intrinsic level, we still need to pass a contant (i32 1) to the llvm
+  // intrinsic as it supports the other variants smstart (only enable streaming
+  // mode) and smstop za (disable only za register access, while still in
+  // streaming mode), and needs a way to distinguish between them.
+  Ops.push_back(ConstantInt::get(Int32Ty, 1));
   Function *F = CGM.getIntrinsic(IntID, {});
   return Builder.CreateCall(F, Ops);
 }
@@ -9238,7 +9240,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   else if (TypeFlags.isSMEMova() || TypeFlags.isSMEMovaVec())
     return EmitSMEIntrinsicWithOffset(TypeFlags, Ops, Builtin->LLVMIntrinsic,
                                       3);
-  else if (TypeFlags.isFirstArgZero() || TypeFlags.isFirstArgOne())
+  else if (TypeFlags.isFirstArgOne())
     return EmitSMEMode(TypeFlags, Ops, Builtin->LLVMIntrinsic);
   else if (Builtin->LLVMIntrinsic != 0) {
     if (TypeFlags.getMergeType() == SVETypeFlags::MergeZeroExp)
