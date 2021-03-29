@@ -34,6 +34,7 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cassert>
@@ -88,6 +89,10 @@ private:
                            MachineBasicBlock::iterator MBBI);
   bool expandStoreSwiftAsyncContext(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator MBBI);
+  bool expandSMESpillFill(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator MBBI,
+                          MachineBasicBlock::iterator &NextMBBI, unsigned Opc,
+                          unsigned PtrueOpc, unsigned CntOpc);
 };
 
 } // end anonymous namespace
@@ -807,6 +812,159 @@ bool AArch64ExpandPseudo::expandStoreSwiftAsyncContext(
   return true;
 }
 
+bool AArch64ExpandPseudo::expandSMESpillFill(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI, unsigned Opc, unsigned PtrueOpc,
+    unsigned CntOpc) {
+  MachineInstr &MI = *MBBI;
+  MachineFunction *MF = MBB.getParent();
+  auto LoopBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+  auto DoneBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+
+  // The second operand is an immediate operand, which is always 0 in this
+  // expansion.
+  unsigned ZA = MI.getOperand(0).getReg();
+  unsigned SP = MI.getOperand(1).getReg();
+  unsigned Wv = MI.getOperand(3).getReg();
+  unsigned Xn = MI.getOperand(4).getReg();
+  unsigned Xm = MI.getOperand(5).getReg();
+  unsigned Pv = MI.getOperand(6).getReg();
+
+  auto TRI = MBB.getParent()->getSubtarget().getRegisterInfo();
+  unsigned Xv =
+      TRI->getMatchingSuperReg(Wv, AArch64::sub_32, &AArch64::GPR64RegClass);
+
+  assert((MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 0) &&
+         "The immediate operand is not a constant 0");
+
+  BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(PtrueOpc))
+      .addReg(Pv, RegState::Define)
+      .addImm(31);
+
+  BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(CntOpc))
+      .addReg(Xn, RegState::Define)
+      .addImm(31)
+      .addImm(1);
+
+  if (Opc == AArch64::LD1_MXIPXX_H_Q || Opc == AArch64::LD1_MXIPXX_V_Q ||
+      Opc == AArch64::ST1_MXIPXX_H_Q || Opc == AArch64::ST1_MXIPXX_V_Q)
+    BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::SBFMXri))
+        .addReg(Xn, RegState::Define)
+        .addReg(Xn)
+        .addImm(1)
+        .addImm(63);
+
+  BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::MADDXrrr))
+      .addReg(Xm, RegState::Define)
+      .addReg(Xn)
+      .addReg(Xn)
+      .addReg(AArch64::XZR);
+
+  BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORRXrs))
+      .addReg(Xv, RegState::Define)
+      .addReg(AArch64::XZR)
+      .addReg(Xn)
+      .addImm(0);
+
+  MF->insert(++MBB.getIterator(), LoopBB);
+  MF->insert(++LoopBB->getIterator(), DoneBB);
+
+  BuildMI(LoopBB, MI.getDebugLoc(), TII->get(AArch64::SUBXri))
+      .addReg(Xv, RegState::Define)
+      .addReg(Xv)
+      .addImm(1)
+      .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
+
+  BuildMI(LoopBB, MI.getDebugLoc(), TII->get(AArch64::SUBXrr))
+      .addReg(Xm, RegState::Define)
+      .addReg(Xm)
+      .addReg(Xn);
+
+  switch (Opc) {
+  case AArch64::LD1_MXIPXX_H_B:
+  case AArch64::LD1_MXIPXX_H_H:
+  case AArch64::LD1_MXIPXX_H_S:
+  case AArch64::LD1_MXIPXX_H_D:
+  case AArch64::LD1_MXIPXX_V_B:
+  case AArch64::LD1_MXIPXX_V_H:
+  case AArch64::LD1_MXIPXX_V_S:
+  case AArch64::LD1_MXIPXX_V_D:
+    BuildMI(LoopBB, MI.getDebugLoc(), TII->get(Opc))
+        .addReg(ZA, RegState::Define)
+        .addReg(ZA)
+        .addReg(Wv)
+        .addImm(0)
+        .addReg(Pv)
+        .addReg(SP)
+        .addReg(Xm);
+    break;
+  case AArch64::ST1_MXIPXX_H_B:
+  case AArch64::ST1_MXIPXX_H_H:
+  case AArch64::ST1_MXIPXX_H_S:
+  case AArch64::ST1_MXIPXX_H_D:
+  case AArch64::ST1_MXIPXX_V_B:
+  case AArch64::ST1_MXIPXX_V_H:
+  case AArch64::ST1_MXIPXX_V_S:
+  case AArch64::ST1_MXIPXX_V_D:
+    BuildMI(LoopBB, MI.getDebugLoc(), TII->get(Opc))
+        .addReg(ZA)
+        .addReg(Wv)
+        .addImm(0)
+        .addReg(Pv)
+        .addReg(SP)
+        .addReg(Xm);
+    break;
+  case AArch64::LD1_MXIPXX_H_Q:
+  case AArch64::LD1_MXIPXX_V_Q:
+    BuildMI(LoopBB, MI.getDebugLoc(), TII->get(Opc))
+        .addReg(ZA, RegState::Define)
+        .addReg(ZA)
+        .addReg(Wv)
+        .addImm(0)
+        .addReg(Pv)
+        .addReg(SP)
+        .addReg(Xm);
+    break;
+  case AArch64::ST1_MXIPXX_H_Q:
+  case AArch64::ST1_MXIPXX_V_Q:
+    BuildMI(LoopBB, MI.getDebugLoc(), TII->get(Opc))
+        .addReg(ZA)
+        .addReg(Wv)
+        .addImm(0)
+        .addReg(Pv)
+        .addReg(SP)
+        .addReg(Xm);
+    break;
+  default:
+    assert(false && "Unsupported opcode in SME spill/fill");
+    break;
+  }
+
+  BuildMI(LoopBB, MI.getDebugLoc(), TII->get(AArch64::CBZX))
+      .addUse(Xv)
+      .addMBB(LoopBB);
+
+  LoopBB->addSuccessor(LoopBB);
+  LoopBB->addSuccessor(DoneBB);
+
+  DoneBB->splice(DoneBB->end(), &MBB, MI, MBB.end());
+  DoneBB->transferSuccessors(&MBB);
+
+  NextMBBI = MBB.end();
+  MI.eraseFromParent();
+
+  LivePhysRegs LiveRegs;
+  computeAndAddLiveIns(LiveRegs, *DoneBB);
+  computeAndAddLiveIns(LiveRegs, *LoopBB);
+
+  LoopBB->clearLiveIns();
+  computeAndAddLiveIns(LiveRegs, *LoopBB);
+  DoneBB->clearLiveIns();
+  computeAndAddLiveIns(LiveRegs, *DoneBB);
+
+  return true;
+}
+
 /// If MBBI references a pseudo instruction that should be expanded here,
 /// do the expansion and return true.  Otherwise return false.
 bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
@@ -1231,6 +1389,66 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      return expandCALL_RVMARKER(MBB, MBBI);
    case AArch64::StoreSwiftAsyncContext:
      return expandStoreSwiftAsyncContext(MBB, MBBI);
+   case AArch64::LD1H_ZaXI_B:
+     return expandSMESpillFill(MBB, MBBI, NextMBBI, AArch64::LD1_MXIPXX_H_B,
+                               AArch64::PTRUE_B, AArch64::CNTB_XPiI);
+   case AArch64::LD1V_ZaXI_B:
+     return expandSMESpillFill(MBB, MBBI, NextMBBI, AArch64::LD1_MXIPXX_V_B,
+                               AArch64::PTRUE_B, AArch64::CNTB_XPiI);
+   case AArch64::LD1H_ZaXI_H:
+     return expandSMESpillFill(MBB, MBBI, NextMBBI, AArch64::LD1_MXIPXX_H_H,
+                               AArch64::PTRUE_H, AArch64::CNTH_XPiI);
+   case AArch64::LD1V_ZaXI_H:
+     return expandSMESpillFill(MBB, MBBI, NextMBBI, AArch64::LD1_MXIPXX_V_H,
+                               AArch64::PTRUE_H, AArch64::CNTH_XPiI);
+   case AArch64::LD1H_ZaXI_W:
+     return expandSMESpillFill(MBB, MBBI, NextMBBI, AArch64::LD1_MXIPXX_H_S,
+                               AArch64::PTRUE_S, AArch64::CNTW_XPiI);
+   case AArch64::LD1V_ZaXI_W:
+     return expandSMESpillFill(MBB, MBBI, NextMBBI, AArch64::LD1_MXIPXX_V_S,
+                               AArch64::PTRUE_S, AArch64::CNTW_XPiI);
+   case AArch64::LD1H_ZaXI_D:
+     return expandSMESpillFill(MBB, MBBI, NextMBBI, AArch64::LD1_MXIPXX_H_D,
+                               AArch64::PTRUE_D, AArch64::CNTD_XPiI);
+   case AArch64::LD1V_ZaXI_D:
+     return expandSMESpillFill(MBB, MBBI, NextMBBI, AArch64::LD1_MXIPXX_V_D,
+                               AArch64::PTRUE_D, AArch64::CNTD_XPiI);
+   case AArch64::LD1H_ZaXI_Q:
+     return expandSMESpillFill(MBB, MBBI, NextMBBI, AArch64::LD1_MXIPXX_V_Q,
+                               AArch64::PTRUE_D, AArch64::CNTD_XPiI);
+   case AArch64::LD1V_ZaXI_Q:
+     return expandSMESpillFill(MBB, MBBI, NextMBBI, AArch64::LD1_MXIPXX_H_Q,
+                               AArch64::PTRUE_D, AArch64::CNTD_XPiI);
+   case AArch64::ST1H_ZaXI_B:
+     return expandSMESpillFill(MBB, MBBI, NextMBBI, AArch64::ST1_MXIPXX_H_B,
+                               AArch64::PTRUE_B, AArch64::CNTB_XPiI);
+   case AArch64::ST1V_ZaXI_B:
+     return expandSMESpillFill(MBB, MBBI, NextMBBI, AArch64::ST1_MXIPXX_V_B,
+                               AArch64::PTRUE_B, AArch64::CNTB_XPiI);
+   case AArch64::ST1H_ZaXI_H:
+     return expandSMESpillFill(MBB, MBBI, NextMBBI, AArch64::ST1_MXIPXX_H_H,
+                               AArch64::PTRUE_H, AArch64::CNTH_XPiI);
+   case AArch64::ST1V_ZaXI_H:
+     return expandSMESpillFill(MBB, MBBI, NextMBBI, AArch64::ST1_MXIPXX_V_H,
+                               AArch64::PTRUE_H, AArch64::CNTH_XPiI);
+   case AArch64::ST1H_ZaXI_W:
+     return expandSMESpillFill(MBB, MBBI, NextMBBI, AArch64::ST1_MXIPXX_H_S,
+                               AArch64::PTRUE_S, AArch64::CNTW_XPiI);
+   case AArch64::ST1V_ZaXI_W:
+     return expandSMESpillFill(MBB, MBBI, NextMBBI, AArch64::ST1_MXIPXX_V_S,
+                               AArch64::PTRUE_S, AArch64::CNTW_XPiI);
+   case AArch64::ST1H_ZaXI_D:
+     return expandSMESpillFill(MBB, MBBI, NextMBBI, AArch64::ST1_MXIPXX_H_D,
+                               AArch64::PTRUE_D, AArch64::CNTD_XPiI);
+   case AArch64::ST1V_ZaXI_D:
+     return expandSMESpillFill(MBB, MBBI, NextMBBI, AArch64::ST1_MXIPXX_V_D,
+                               AArch64::PTRUE_D, AArch64::CNTD_XPiI);
+   case AArch64::ST1H_ZaXI_Q:
+     return expandSMESpillFill(MBB, MBBI, NextMBBI, AArch64::ST1_MXIPXX_H_Q,
+                               AArch64::PTRUE_D, AArch64::CNTD_XPiI);
+   case AArch64::ST1V_ZaXI_Q:
+     return expandSMESpillFill(MBB, MBBI, NextMBBI, AArch64::ST1_MXIPXX_V_Q,
+                               AArch64::PTRUE_D, AArch64::CNTD_XPiI);
   }
   return false;
 }

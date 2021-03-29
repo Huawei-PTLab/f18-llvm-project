@@ -443,6 +443,102 @@ multiclass sme_fill<string opcodestr> {
 }
 
 //===----------------------------------------------------------------------===//
+// Unpredicated  instructions
+//===----------------------------------------------------------------------===//
+
+// Pseudo instructions representing unpredicated LDR and STR instructions for lowering
+// ScalableMatrixType "load" and "store" instructions. Since there are no unpredicated
+// instrucitons in the ISA to load and store matrices, we use LD1 and ST1 instructions.
+
+// These get expanded to a sequence of LD1/ST1 instrucions in AArch64ExpandPseudoInsts.
+
+multiclass unpred_load_sme<ValueType Ty, Instruction LoadInst> {
+  def _fi : Pat<(Ty (load (am_sve_fi GPR64sp:$base, simm9:$offset))),
+                (LoadInst GPR64sp:$base, simm9:$offset, (IMPLICIT_DEF),
+                    (IMPLICIT_DEF), (IMPLICIT_DEF), (IMPLICIT_DEF))>;
+}
+
+multiclass SMEPseudoLoad<MatrixTileVectorOperand zar8ty, MatrixTileVectorOperand zar16ty, MatrixTileVectorOperand zar32ty,
+                         MatrixTileVectorOperand zar64ty, MatrixTileVectorOperand zar128ty> {
+  let mayLoad = 1, hasSideEffects = 0 in {
+    def _B : Pseudo<(outs zar8ty:$Za),
+                    (ins GPR64sp:$sp, simm9:$offset, MatrixIndexGPR32Op12_15:$Wv,
+                     GPR64:$Xn, GPR64:$Xm, PPR3bAny:$Pv),[]>, Sched<[]>;
+    def _H : Pseudo<(outs zar16ty:$Za),
+                    (ins GPR64sp:$sp, simm9:$offset, MatrixIndexGPR32Op12_15:$Wv,
+                     GPR64:$Xn, GPR64:$Xm, PPR3bAny:$Pv),[]>, Sched<[]>;
+    def _W : Pseudo<(outs zar32ty:$Za),
+                    (ins GPR64sp:$sp, simm9:$offset, MatrixIndexGPR32Op12_15:$Wv,
+                     GPR64:$Xn, GPR64:$Xm, PPR3bAny:$Pv),[]>, Sched<[]>;
+    def _D : Pseudo<(outs zar64ty:$Za),
+                    (ins GPR64sp:$sp, simm9:$offset, MatrixIndexGPR32Op12_15:$Wv,
+                     GPR64:$Xn, GPR64:$Xm, PPR3bAny:$Pv),[]>, Sched<[]>;
+    def _Q : Pseudo<(outs zar128ty:$Za),
+                    (ins GPR64sp:$sp, simm9:$offset, MatrixIndexGPR32Op12_15:$Wv,
+                     GPR64:$Xn, GPR64:$Xm, PPR3bAny:$Pv),[]>, Sched<[]>;
+  }
+
+  defm : unpred_load_sme<mxv256i8, !cast<Instruction>(NAME # _B)>;
+  defm : unpred_load_sme<mxv64i16, !cast<Instruction>(NAME # _H)>;
+  defm : unpred_load_sme<mxv64f16, !cast<Instruction>(NAME # _H)>;
+  defm : unpred_load_sme<mxv64bf16, !cast<Instruction>(NAME # _H)>;
+  defm : unpred_load_sme<mxv16i32, !cast<Instruction>(NAME # _W)>;
+  defm : unpred_load_sme<mxv16f32, !cast<Instruction>(NAME # _W)>;
+  defm : unpred_load_sme<mxv4i64, !cast<Instruction>(NAME # _D)>;
+  defm : unpred_load_sme<mxv4f64, !cast<Instruction>(NAME # _D)>;
+  defm : unpred_load_sme<mxv1i128, !cast<Instruction>(NAME # _Q)>;
+}
+
+defm LD1H_ZaXI : SMEPseudoLoad<TileVectorOpH8, TileVectorOpH16, TileVectorOpH32, TileVectorOpH64, TileVectorOpH128>;
+defm LD1V_ZaXI : SMEPseudoLoad<TileVectorOpV8, TileVectorOpV16, TileVectorOpV32, TileVectorOpV64, TileVectorOpV128>;
+
+multiclass unpred_store_sme<ValueType Ty, Instruction StoreInst> {
+  def _fi : Pat<(store (Ty ZAZeroOperand:$Za), (am_sve_fi GPR64sp:$base, simm9:$offset)),
+                (StoreInst ZAZeroOperand:$Za, GPR64sp:$base, simm9:$offset, (IMPLICIT_DEF),
+                    (IMPLICIT_DEF), (IMPLICIT_DEF), (IMPLICIT_DEF))>;
+}
+
+multiclass unpred_store_sme_q<ValueType Ty, Instruction StoreInst> {
+  def _fi : Pat<(store (Ty MPR128:$Za), (am_sve_fi GPR64sp:$base, simm9:$offset)),
+                (StoreInst MPR128:$Za, GPR64sp:$base, simm9:$offset, (IMPLICIT_DEF),
+                    (IMPLICIT_DEF), (IMPLICIT_DEF), (IMPLICIT_DEF))>;
+}
+
+multiclass SMEPseudoStore<MatrixTileVectorOperand zar8ty, MatrixTileVectorOperand zar16ty, MatrixTileVectorOperand zar32ty,
+                          MatrixTileVectorOperand zar64ty, MatrixTileVectorOperand zar128ty> {
+  let mayStore = 1, hasSideEffects = 0 in {
+    def _B : Pseudo<(outs), (ins zar8ty:$Za, GPR64sp:$sp, simm9:$offset,
+                    MatrixIndexGPR32Op12_15:$Wv, GPR64:$Xn, GPR64:$Xm, PPR3bAny:$Pv),
+                    []>, Sched<[]>;
+    def _H : Pseudo<(outs), (ins zar16ty:$Za, GPR64sp:$sp, simm9:$offset,
+                    MatrixIndexGPR32Op12_15:$Wv, GPR64:$Xn, GPR64:$Xm, PPR3bAny:$Pv),
+                    []>, Sched<[]>;
+    def _W : Pseudo<(outs), (ins zar32ty:$Za, GPR64sp:$sp, simm9:$offset,
+                    MatrixIndexGPR32Op12_15:$Wv, GPR64:$Xn, GPR64:$Xm, PPR3bAny:$Pv),
+                    []>, Sched<[]>;
+    def _D : Pseudo<(outs), (ins zar64ty:$Za, GPR64sp:$sp, simm9:$offset,
+                    MatrixIndexGPR32Op12_15:$Wv, GPR64:$Xn, GPR64:$Xm, PPR3bAny:$Pv),
+                    []>, Sched<[]>;
+    def _Q : Pseudo<(outs), (ins zar128ty:$Za, GPR64sp:$sp, simm9:$offset,
+                    MatrixIndexGPR32Op12_15:$Wv, GPR64:$Xn, GPR64:$Xm, PPR3bAny:$Pv),
+                    []>, Sched<[]>;
+  }
+
+  defm : unpred_store_sme<mxv256i8, !cast<Instruction>(NAME # _B)>;
+  defm : unpred_store_sme<mxv64i16, !cast<Instruction>(NAME # _H)>;
+  defm : unpred_store_sme<mxv64f16, !cast<Instruction>(NAME # _H)>;
+  defm : unpred_store_sme<mxv64bf16, !cast<Instruction>(NAME # _H)>;
+  defm : unpred_store_sme<mxv16i32, !cast<Instruction>(NAME # _W)>;
+  defm : unpred_store_sme<mxv16f32, !cast<Instruction>(NAME # _W)>;
+  defm : unpred_store_sme<mxv4i64, !cast<Instruction>(NAME # _D)>;
+  defm : unpred_store_sme<mxv4f64, !cast<Instruction>(NAME # _D)>;
+  defm : unpred_store_sme_q<mxv1i128, !cast<Instruction>(NAME # _Q)>;
+}
+
+defm ST1H_ZaXI : SMEPseudoStore<TileVectorOpH8, TileVectorOpH16, TileVectorOpH32, TileVectorOpH64, TileVectorOpH128>;
+defm ST1V_ZaXI : SMEPseudoStore<TileVectorOpV8, TileVectorOpV16, TileVectorOpV32, TileVectorOpV64, TileVectorOpV128>;
+
+//===----------------------------------------------------------------------===//
 // Move instructions
 //===----------------------------------------------------------------------===//
 

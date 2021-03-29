@@ -1462,6 +1462,9 @@ public:
         EVT PointerTy(getPointerMemTy(DL, PT->getAddressSpace()));
         Elm = PointerTy.getTypeForEVT(Ty->getContext());
       }
+      if (ScalableMatrixType *MTy = dyn_cast<ScalableMatrixType>(Ty))
+        return EVT::getMatrixVT(Ty->getContext(), EVT::getEVT(Elm, false),
+                                MTy->getElementCount());
       return EVT::getVectorVT(Ty->getContext(), EVT::getEVT(Elm, false),
                               VTy->getElementCount());
     }

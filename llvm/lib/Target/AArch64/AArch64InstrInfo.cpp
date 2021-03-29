@@ -4349,6 +4349,26 @@ int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI,
   case AArch64::IRGstack:
   case AArch64::STGloop:
   case AArch64::STZGloop:
+  case AArch64::LD1H_ZaXI_B:
+  case AArch64::LD1V_ZaXI_B:
+  case AArch64::LD1H_ZaXI_H:
+  case AArch64::LD1V_ZaXI_H:
+  case AArch64::LD1H_ZaXI_W:
+  case AArch64::LD1V_ZaXI_W:
+  case AArch64::LD1H_ZaXI_D:
+  case AArch64::LD1V_ZaXI_D:
+  case AArch64::LD1H_ZaXI_Q:
+  case AArch64::LD1V_ZaXI_Q:
+  case AArch64::ST1H_ZaXI_B:
+  case AArch64::ST1V_ZaXI_B:
+  case AArch64::ST1H_ZaXI_H:
+  case AArch64::ST1V_ZaXI_H:
+  case AArch64::ST1H_ZaXI_W:
+  case AArch64::ST1V_ZaXI_W:
+  case AArch64::ST1H_ZaXI_D:
+  case AArch64::ST1V_ZaXI_D:
+  case AArch64::ST1H_ZaXI_Q:
+  case AArch64::ST1V_ZaXI_Q:
     return AArch64FrameOffsetCannotUpdate;
   }
 

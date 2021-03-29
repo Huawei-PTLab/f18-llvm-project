@@ -1,0 +1,118 @@
+# RUN: llc -mattr=+sve,+sme -mtriple=aarch64-none-linux-gnu -O1 %s -o - | FileCheck %s
+#
+--- |
+
+  define void @smepseudostoreh() { entry: unreachable }
+  define void @smepseudostorev() { entry: unreachable }
+...
+
+name:          smepseudostoreh
+alignment:     16
+tracksRegLiveness:  true
+frameInfo:
+   maxCallFrameSize: 0
+body:                |
+  bb.0.entry:
+    liveins: $zab0, $zah0, $zad0, $zas0, $sp, $w12, $x0, $x1, $x2, $p0
+
+    ; CHECK-LABEL: smepseudostoreh:
+    ; CHECK:       cntb    x0
+    ; CHECK:       ptrue   p0.b
+    ; CHECK:       mul     x1, x0, x0
+    ; CHECK:       mov     x12, x0
+    ; CHECK:       .LBB0_1:
+    ; CHECK:       sub     x12, x12, #1
+    ; CHECK:       sub     x1, x1, x0
+    ; CHECK:       st1b    {za0h.b[w12, 0]}, p0, [sp, x1]
+    ; CHECK:       cbz     x12, .LBB0_1
+    ; CHECK:       cnth    x0
+    ; CHECK:       ptrue   p0.h
+    ; CHECK:       mul     x1, x0, x0
+    ; CHECK:       mov     x12, x0
+    ; CHECK:       .LBB0_3:
+    ; CHECK:       sub     x12, x12, #1
+    ; CHECK:       sub     x1, x1, x0
+    ; CHECK:       st1h    {za0h.h[w12, 0]}, p0, [sp, x1, lsl #1]
+    ; CHECK:       cbz     x12, .LBB0_3
+    ; CHECK:       cntw    x0
+    ; CHECK:       ptrue   p0.s
+    ; CHECK:       mul     x1, x0, x0
+    ; CHECK:       mov     x12, x0
+    ; CHECK:       .LBB0_5:
+    ; CHECK:       sub     x12, x12, #1
+    ; CHECK:       sub     x1, x1, x0
+    ; CHECK:       st1w    {za0h.s[w12, 0]}, p0, [sp, x1, lsl #2]
+    ; CHECK:       cbz     x12, .LBB0_5
+    ; CHECK:       cntd    x0
+    ; CHECK:       ptrue   p0.d
+    ; CHECK:       mul     x1, x0, x0
+    ; CHECK:       mov     x12, x0
+    ; CHECK:       .LBB0_7:
+    ; CHECK:       sub     x12, x12, #1
+    ; CHECK:       sub     x1, x1, x0
+    ; CHECK:       st1d    {za0h.d[w12, 0]}, p0, [sp, x1, lsl #3]
+    ; CHECK:       cbz     x12, .LBB0_7
+    ; CHECK:       ret
+
+    ST1H_ZaXI_B $zab0, $sp, 0, $w12, $x0, $x1, $p0
+    ST1H_ZaXI_H $zah0, $sp, 0, $w12, $x0, $x1, $p0
+    ST1H_ZaXI_W $zas0, $sp, 0, $w12, $x0, $x1, $p0
+    ST1H_ZaXI_D $zad0, $sp, 0, $w12, $x0, $x1, $p0
+    RET_ReallyLR
+---
+...
+
+name:          smepseudostorev
+alignment:     16
+tracksRegLiveness:  true
+frameInfo:
+   maxCallFrameSize: 0
+body:                |
+  bb.0.entry:
+    liveins: $zab0, $zah0, $zad0, $zas0, $sp, $x0, $w12, $x1, $x2, $p0
+
+    ; CHECK-LABEL: smepseudostorev:
+    ; CHECK:       cntb    x0
+    ; CHECK:       ptrue   p0.b
+    ; CHECK:       mul     x1, x0, x0
+    ; CHECK:       mov     x12, x0
+    ; CHECK:       .LBB1_1:
+    ; CHECK:       sub     x12, x12, #1
+    ; CHECK:       sub     x1, x1, x0
+    ; CHECK:       st1b    {za0v.b[w12, 0]}, p0, [sp, x1]
+    ; CHECK:       cbz     x12, .LBB1_1
+    ; CHECK:       cnth    x0
+    ; CHECK:       ptrue   p0.h
+    ; CHECK:       mul     x1, x0, x0
+    ; CHECK:       mov     x12, x0
+    ; CHECK:       .LBB1_3:
+    ; CHECK:       sub     x12, x12, #1
+    ; CHECK:       sub     x1, x1, x0
+    ; CHECK:       st1h    {za0v.h[w12, 0]}, p0, [sp, x1, lsl #1]
+    ; CHECK:       cbz     x12, .LBB1_3
+    ; CHECK:       cntw    x0
+    ; CHECK:       ptrue   p0.s
+    ; CHECK:       mul     x1, x0, x0
+    ; CHECK:       mov     x12, x0
+    ; CHECK:       .LBB1_5:
+    ; CHECK:       sub     x12, x12, #1
+    ; CHECK:       sub     x1, x1, x0
+    ; CHECK:       st1w    {za0v.s[w12, 0]}, p0, [sp, x1, lsl #2]
+    ; CHECK:       cbz     x12, .LBB1_5
+    ; CHECK:       cntd    x0
+    ; CHECK:       ptrue   p0.d
+    ; CHECK:       mul     x1, x0, x0
+    ; CHECK:       mov     x12, x0
+    ; CHECK:       .LBB1_7:
+    ; CHECK:       sub     x12, x12, #1
+    ; CHECK:       sub     x1, x1, x0
+    ; CHECK:       st1d    {za0v.d[w12, 0]}, p0, [sp, x1, lsl #3]
+    ; CHECK:       cbz     x12, .LBB1_7
+    ; CHECK:       ret
+
+    ST1V_ZaXI_B $zab0, $sp, 0, $w12, $x0, $x1, $p0
+    ST1V_ZaXI_H $zah0, $sp, 0, $w12, $x0, $x1, $p0
+    ST1V_ZaXI_W $zas0, $sp, 0, $w12, $x0, $x1, $p0
+    ST1V_ZaXI_D $zad0, $sp, 0, $w12, $x0, $x1, $p0
+    RET_ReallyLR
+---
