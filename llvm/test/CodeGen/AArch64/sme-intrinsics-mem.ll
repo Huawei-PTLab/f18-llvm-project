@@ -113,3 +113,18 @@ declare <mscale x 1 x i128> @llvm.aarch64.sme.ld1.row.mxv1i128(<vscale x 1 x i1>
 declare <mscale x 1 x i128> @llvm.aarch64.sme.ld1.col.mxv1i128(<vscale x 1 x i1>, <mscale x 1 x i128>, i32, i64, i128*)
 declare void  @llvm.aarch64.sme.st1.row.mxv1i128(<vscale x 1 x i1>, <mscale x 1 x i128>, i32, i64, i128*)
 declare void  @llvm.aarch64.sme.st1.col.mxv1i128(<vscale x 1 x i1>, <mscale x 1 x i128>, i32, i64, i128*)
+
+define dso_local void @test_ldr_str(<mscale x 256 x i8> %m, i32 %wv, i8* %addr) nounwind {
+; CHECK-LABEL: test_ldr_str:
+; CHECK: mov w12, w0
+; CHECK: ldr za[w12], [x1]
+; CHECK: mov w12, #1
+; CHECK: str za[w12], [x1]
+; CHECK: ret
+  %1 = call <mscale x 256 x i8> @llvm.aarch64.sme.ldr.mxv256i8(<mscale x 256 x i8> %m, i32 %wv, i8* %addr)
+  call void @llvm.aarch64.sme.str.mxv256i8(<mscale x 256 x i8> %1, i32 1, i8* %addr)
+  ret void
+}
+
+declare <mscale x 256 x i8> @llvm.aarch64.sme.ldr.mxv256i8(<mscale x 256 x i8>, i32, i8*) #1
+declare void @llvm.aarch64.sme.str.mxv256i8(<mscale x 256 x i8>, i32, i8* nocapture) #3
