@@ -102,6 +102,7 @@
 // N: svfloat64_t
 
 // J: Prefetch type (sv_prfop)
+// %: pointer to void
 // A: pointer to int8_t
 // B: pointer to int16_t
 // C: pointer to int32_t
@@ -799,6 +800,9 @@ let ArchGuard = "defined(__ARM_FEATURE_SME)" in {
 }
 
 let ArchGuard = "defined(__ARM_FEATURE_SME)" in {
+  def SMLDR : MInst<"smldr[_{d}]", "yymQ", "cUc", [IsSME], MemEltTyDefault, "aarch64_sme_ldr">;
+  def SMSTR : MInst<"smstr[_{d}]", "vym%", "cUc", [IsSME], MemEltTyDefault, "aarch64_sme_str">;
+
   def SMLD1H : MInst<"smld1h[_{d}]", "yPymc", "csilUcUsUiUlhfd", [IsSME, IsSMELoad], MemEltTyDefault, "aarch64_sme_ld1_row">;
   def SMLD1V : MInst<"smld1v[_{d}]", "yPymc", "csilUcUsUiUlhfd", [IsSME, IsSMELoad], MemEltTyDefault, "aarch64_sme_ld1_col">;
   def SMST1H : MInst<"smst1h[_{d}]", "vPymp", "csilUcUsUiUlhfd", [IsSME, IsSMEStore], MemEltTyDefault, "aarch64_sme_st1_row">;

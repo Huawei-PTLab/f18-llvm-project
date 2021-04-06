@@ -792,6 +792,11 @@ void SVEType::applyModifier(char Mod) {
     NumVectors = 0;
     Signed = true;
     break;
+  case '%':
+    Pointer = true;
+    Void = true;
+    NumVectors = 0;
+    break;
   case 'A':
     Pointer = true;
     ElementBitwidth = Bitwidth = 8;
