@@ -1561,6 +1561,24 @@ class SME_2VectorArg_Pred_Intrinsic
                 ],
                 [IntrNoMem]>;
 
+class SME_Ldr_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anymatrix_ty],
+                [
+                  LLVMMatchType<0>,
+                  llvm_i32_ty,
+                  llvm_ptr_ty
+                ],
+                [IntrReadMem, IntrArgMemOnly]>;
+
+class SME_Str_Intrinsic
+    : DefaultAttrsIntrinsic<[],
+                [
+                  llvm_anymatrix_ty,
+                  llvm_i32_ty,
+                  llvm_ptr_ty
+                ],
+                [IntrWriteMem, IntrArgMemOnly, NoCapture<ArgIndex<2>>]>;
+
 class SME_Load_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anymatrix_ty],
                 [
@@ -2664,6 +2682,9 @@ def int_aarch64_sme_mova_vec_col : SME_Mov_Vec_Intrinsic;
 def int_aarch64_sme_start : SME_Switch_Intrinsic;
 def int_aarch64_sme_stop  : SME_Switch_Intrinsic;
 def int_aarch64_sme_zero  : SME_Zero_Intrinsic;
+
+def int_aarch64_sme_ldr : SME_Ldr_Intrinsic;
+def int_aarch64_sme_str : SME_Str_Intrinsic;
 
 def int_aarch64_sme_ld1_row : SME_Load_Intrinsic;
 def int_aarch64_sme_ld1_col : SME_Load_Intrinsic;
