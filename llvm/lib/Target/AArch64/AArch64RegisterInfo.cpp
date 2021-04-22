@@ -722,7 +722,12 @@ void AArch64RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // as much as possible above.  Handle the rest, providing a register that is
   // SP+LargeImm.
   Register ScratchReg = createScratchRegisterForInstruction(MI, TII);
-  emitFrameOffset(MBB, II, MI.getDebugLoc(), ScratchReg, FrameReg, Offset, TII);
+  if (TFI->isSMESpillFillOp(II))
+    emitSMEFrameOffset(MBB, II, MI.getDebugLoc(), ScratchReg, FrameReg, Offset,
+                       TII, true);
+  else
+    emitFrameOffset(MBB, II, MI.getDebugLoc(), ScratchReg, FrameReg, Offset,
+                    TII);
   MI.getOperand(FIOperandNum).ChangeToRegister(ScratchReg, false, false, true);
 }
 

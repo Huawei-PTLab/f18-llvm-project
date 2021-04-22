@@ -1085,6 +1085,36 @@ static bool isTargetWindows(const MachineFunction &MF) {
   return MF.getSubtarget<AArch64Subtarget>().isTargetWindows();
 }
 
+// Return if the instruction is a SME spill/fill instruction.
+bool AArch64FrameLowering::isSMESpillFillOp(
+    MachineBasicBlock::iterator I) const {
+  switch (I->getOpcode()) {
+  default:
+    return false;
+  case AArch64::LD1H_ZaXI_Q:
+  case AArch64::LD1V_ZaXI_Q:
+  case AArch64::ST1H_ZaXI_Q:
+  case AArch64::ST1V_ZaXI_Q:
+  case AArch64::LD1H_ZaXI_D:
+  case AArch64::LD1V_ZaXI_D:
+  case AArch64::ST1H_ZaXI_D:
+  case AArch64::ST1V_ZaXI_D:
+  case AArch64::LD1H_ZaXI_W:
+  case AArch64::LD1V_ZaXI_W:
+  case AArch64::ST1H_ZaXI_W:
+  case AArch64::ST1V_ZaXI_W:
+  case AArch64::LD1H_ZaXI_H:
+  case AArch64::LD1V_ZaXI_H:
+  case AArch64::ST1H_ZaXI_H:
+  case AArch64::ST1V_ZaXI_H:
+  case AArch64::LD1H_ZaXI_B:
+  case AArch64::LD1V_ZaXI_B:
+  case AArch64::ST1H_ZaXI_B:
+  case AArch64::ST1V_ZaXI_B:
+    return true;
+  }
+}
+
 // Convenience function to determine whether I is an SVE callee save.
 static bool IsSVECalleeSave(MachineBasicBlock::iterator I) {
   switch (I->getOpcode()) {
@@ -1096,6 +1126,137 @@ static bool IsSVECalleeSave(MachineBasicBlock::iterator I) {
   case AArch64::LDR_PXI:
     return I->getFlag(MachineInstr::FrameSetup) ||
            I->getFlag(MachineInstr::FrameDestroy);
+  }
+}
+
+static void emitSMEFrameOffsetAdj(MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator MBBI,
+                                  const DebugLoc &DL, unsigned DestReg,
+                                  unsigned SrcReg, int64_t Offset, unsigned Opc,
+                                  const TargetInstrInfo *TII,
+                                  MachineInstr::MIFlag Flag) {
+  int Sign = 1;
+  unsigned MaxEncoding, ShiftSize;
+  switch (Opc) {
+  case AArch64::ADDXri:
+  case AArch64::ADDSXri:
+  case AArch64::SUBXri:
+  case AArch64::SUBSXri:
+    MaxEncoding = 0xfff;
+    ShiftSize = 12;
+    break;
+  case AArch64::SME_FI:
+  case AArch64::SME_ADDVL:
+    MaxEncoding = 31;
+    ShiftSize = 0;
+    if (Offset < 0) {
+      MaxEncoding = 32;
+      Sign = -1;
+      Offset = -Offset;
+    }
+    break;
+  default:
+    llvm_unreachable("Unsupported opcode");
+  }
+
+  const unsigned MaxEncodableValue = MaxEncoding << ShiftSize;
+  Register TmpReg = DestReg;
+  if (TmpReg == AArch64::XZR)
+    TmpReg = MBB.getParent()->getRegInfo().createVirtualRegister(
+        &AArch64::GPR64RegClass);
+  do {
+    uint64_t ThisVal = std::min<uint64_t>(Offset, MaxEncodableValue);
+    unsigned LocalShiftSize = 0;
+    if (ThisVal > MaxEncoding) {
+      ThisVal = ThisVal >> ShiftSize;
+      LocalShiftSize = ShiftSize;
+    }
+    assert((ThisVal >> ShiftSize) <= MaxEncoding &&
+           "Encoding cannot handle value that big");
+
+    Offset -= ThisVal << LocalShiftSize;
+    if (Offset == 0)
+      TmpReg = DestReg;
+
+    auto MBI = BuildMI(MBB, MBBI, DL, TII->get(Opc), TmpReg);
+
+    Register SMETempReg = MBB.getParent()->getRegInfo().createVirtualRegister(
+        &AArch64::GPR64RegClass);
+
+    if (Opc == AArch64::SME_FI) {
+      MBI = MBI.addReg(SMETempReg, RegState::Define);
+      MBI = MBI.addReg(SrcReg);
+    } else if (Opc == AArch64::SME_ADDVL) {
+      MBI = MBI.addReg(SMETempReg, RegState::Define);
+      MBI = MBI.addReg(SrcReg);
+      MBI = MBI.addImm(Sign * (int)ThisVal);
+    } else {
+      MBI = MBI.addReg(SrcReg);
+      MBI = MBI.addImm(Sign * (int)ThisVal);
+    }
+    if (ShiftSize)
+      MBI = MBI.addImm(
+          AArch64_AM::getShifterImm(AArch64_AM::LSL, LocalShiftSize));
+    MBI = MBI.setMIFlag(Flag);
+
+    SrcReg = TmpReg;
+  } while (Offset);
+}
+
+static void decomposeSMEStackOffsetForFrameOffsets(const StackOffset &Offset,
+                                                   int64_t &NumBytes,
+                                                   int64_t &NumPredicateVectors,
+                                                   int64_t &NumDataVectors,
+                                                   int64_t size) {
+  assert(Offset.getScalable() % 2 == 0 && "Invalid frame offset");
+
+  NumBytes = Offset.getFixed();
+  NumDataVectors = 0;
+  NumPredicateVectors = Offset.getScalable() / 2;
+
+  if (NumPredicateVectors % 8 == 0 || NumPredicateVectors < -64 ||
+      NumPredicateVectors > 62) {
+    NumDataVectors = NumPredicateVectors / size;
+  }
+}
+
+void AArch64FrameLowering::emitSMEFrameOffset(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    const DebugLoc &DL, unsigned DestReg, unsigned SrcReg, StackOffset Offset,
+    const TargetInstrInfo *TII, bool IsEliminateFI, unsigned size,
+    MachineInstr::MIFlag Flag, bool SetNZCV) const {
+  int64_t Bytes, NumPredicateVectors, NumDataVectors;
+  unsigned Opc;
+  int64_t RegSize;
+
+  if (IsEliminateFI) {
+    RegSize = 8;
+    Opc = AArch64::SME_FI;
+  } else {
+    RegSize = size / 2;
+    Opc = AArch64::SME_ADDVL;
+  }
+
+  decomposeSMEStackOffsetForFrameOffsets(Offset, Bytes, NumPredicateVectors,
+                                         NumDataVectors, RegSize);
+
+  if (Bytes || (!Offset && SrcReg != DestReg)) {
+    assert((DestReg != AArch64::SP || Bytes % 8 == 0) &&
+           "SP increment/decrement not 8-byte aligned");
+    Opc = SetNZCV ? AArch64::ADDSXri : AArch64::ADDXri;
+    if (Bytes < 0) {
+      Bytes = -Bytes;
+      Opc = SetNZCV ? AArch64::SUBSXri : AArch64::SUBXri;
+    }
+    emitSMEFrameOffsetAdj(MBB, MBBI, DL, DestReg, SrcReg, Bytes, Opc, TII,
+                          Flag);
+    SrcReg = DestReg;
+  }
+
+  if (NumDataVectors) {
+    emitSMEFrameOffsetAdj(MBB, MBBI, DL, DestReg, SrcReg, NumDataVectors, Opc,
+                          TII, Flag);
+    SrcReg = DestReg;
   }
 }
 
@@ -1435,7 +1596,30 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     AllocateAfter = SVEStackSize - AllocateBefore;
   }
 
-  // Allocate space for the callee saves (if any).
+  // Determine the number of SME tiles.
+  std::map<int, int> SMETiles;
+  for (int StackObj = MFI.getObjectIndexBegin();
+       StackObj < MFI.getObjectIndexEnd(); StackObj++) {
+    if (MFI.getStackID(StackObj) == TargetStackID::ScalableVector &&
+        MFI.getObjectAllocation(StackObj)) {
+      if (isa<ScalableMatrixType>(
+              *MFI.getObjectAllocation(StackObj)->getAllocatedType())) {
+        SMETiles[MFI.getObjectSize(StackObj)]++;
+      }
+    }
+  }
+
+  // For each different type of tile allocate prolog/epilog.
+  StackOffset AllocateSME;
+  for (auto const &b : SMETiles) {
+    unsigned size = b.first * b.second;
+    AllocateSME = StackOffset::getScalable(size);
+    emitSMEFrameOffset(MBB, CalleeSavesBegin, DL, AArch64::SP, AArch64::SP,
+                       -AllocateSME, TII, false, b.first,
+                       MachineInstr::FrameSetup);
+    AllocateBefore = AllocateBefore - AllocateSME;
+  }
+
   emitFrameOffset(MBB, CalleeSavesBegin, DL, AArch64::SP, AArch64::SP,
                   -AllocateBefore, TII,
                   MachineInstr::FrameSetup);
@@ -1808,7 +1992,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   while (LastPopI != Begin) {
     --LastPopI;
     if (!LastPopI->getFlag(MachineInstr::FrameDestroy) ||
-        IsSVECalleeSave(LastPopI)) {
+        IsSVECalleeSave(LastPopI) || isSMESpillFillOp(LastPopI)) {
       ++LastPopI;
       break;
     } else if (CombineSPBump)
@@ -1866,7 +2050,8 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   if (int64_t CalleeSavedSize = AFI->getSVECalleeSavedStackSize()) {
     RestoreBegin = std::prev(RestoreEnd);
     while (RestoreBegin != MBB.begin() &&
-           IsSVECalleeSave(std::prev(RestoreBegin)))
+           (IsSVECalleeSave(std::prev(RestoreBegin)) ||
+            isSMEOpcode(std::prev(RestoreBegin))))
       --RestoreBegin;
 
     assert(IsSVECalleeSave(RestoreBegin) &&
@@ -1896,6 +2081,28 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
                         StackOffset::getFixed(NumBytes), TII,
                         MachineInstr::FrameDestroy);
         NumBytes = 0;
+      }
+
+      std::map<int, int> SMETiles;
+      for (int StackObj = MFI.getObjectIndexBegin();
+           StackObj < MFI.getObjectIndexEnd(); StackObj++) {
+        if (MFI.getStackID(StackObj) == TargetStackID::ScalableVector &&
+            MFI.getObjectAllocation(StackObj)) {
+          if (isa<ScalableMatrixType>(
+                  *MFI.getObjectAllocation(StackObj)->getAllocatedType())) {
+            SMETiles[MFI.getObjectSize(StackObj)]++;
+          }
+        }
+      }
+
+      StackOffset DeallocateSME;
+      for (auto const &b : SMETiles) {
+        unsigned size = b.first * b.second;
+        DeallocateSME = StackOffset::getScalable(size);
+        emitSMEFrameOffset(MBB, RestoreEnd, DL, AArch64::SP, AArch64::SP,
+                           DeallocateSME, TII, false, b.first,
+                           MachineInstr::FrameDestroy);
+        DeallocateAfter = DeallocateAfter - DeallocateSME;
       }
 
       emitFrameOffset(MBB, RestoreBegin, DL, AArch64::SP, AArch64::SP,

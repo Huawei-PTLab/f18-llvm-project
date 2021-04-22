@@ -538,6 +538,11 @@ multiclass SMEPseudoStore<MatrixTileVectorOperand zar8ty, MatrixTileVectorOperan
 defm ST1H_ZaXI : SMEPseudoStore<TileVectorOpH8, TileVectorOpH16, TileVectorOpH32, TileVectorOpH64, TileVectorOpH128>;
 defm ST1V_ZaXI : SMEPseudoStore<TileVectorOpV8, TileVectorOpV16, TileVectorOpV32, TileVectorOpV64, TileVectorOpV128>;
 
+// Pseudo instruction for prologue and epilogue generation of stack frame allocation
+// for SME tiles.
+def SME_ADDVL: Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm), (ins GPR64sp:$Rn, simm6_32b:$imm6), []>, Sched<[]>;
+def SME_FI: Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm), (ins GPR64sp:$Rn), []>, Sched<[]>;
+
 //===----------------------------------------------------------------------===//
 // Move instructions
 //===----------------------------------------------------------------------===//

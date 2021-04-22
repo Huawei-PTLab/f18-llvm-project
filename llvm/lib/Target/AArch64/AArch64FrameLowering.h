@@ -26,6 +26,16 @@ public:
       : TargetFrameLowering(StackGrowsDown, Align(16), 0, Align(16),
                             true /*StackRealignable*/) {}
 
+  void emitSMEFrameOffset(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
+                          unsigned DestReg, unsigned SrcReg, StackOffset Offset,
+                          const TargetInstrInfo *TII, bool IsEliminateFI,
+                          unsigned size = 0,
+                          MachineInstr::MIFlag Flag = MachineInstr::NoFlags,
+                          bool SetNZCV = false) const;
+
+  bool isSMESpillFillOp(MachineBasicBlock::iterator I) const;
+
   void
   emitCalleeSavedFrameMoves(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MBBI) const override;
