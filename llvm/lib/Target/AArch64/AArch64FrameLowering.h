@@ -58,8 +58,9 @@ public:
                                          bool ForSimm) const;
   StackOffset resolveFrameOffsetReference(const MachineFunction &MF,
                                           int64_t ObjectOffset, bool isFixed,
-                                          bool isSVE, Register &FrameReg,
-                                          bool PreferFP, bool ForSimm) const;
+                                          bool isSVE, bool isSME,
+                                          Register &FrameReg, bool PreferFP,
+                                          bool ForSimm) const;
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
                                  ArrayRef<CalleeSavedInfo> CSI,
@@ -93,6 +94,7 @@ public:
 
   bool enableStackSlotScavenging(const MachineFunction &MF) const override;
   TargetStackID::Value getStackIDForScalableVectors() const override;
+  TargetStackID::Value getStackIDForScalableMatrix() const override;
 
   void processFunctionBeforeFrameFinalized(MachineFunction &MF,
                                            RegScavenger *RS) const override;
@@ -119,6 +121,7 @@ public:
       return false;
     case TargetStackID::Default:
     case TargetStackID::ScalableVector:
+    case TargetStackID::ScalableMatrix:
     case TargetStackID::NoAlloc:
       return true;
     }
@@ -152,6 +155,9 @@ private:
   int64_t assignSVEStackObjectOffsets(MachineFrameInfo &MF,
                                       int &MinCSFrameIndex,
                                       int &MaxCSFrameIndex) const;
+
+  int64_t estimateSMEStackObjectOffsets(MachineFrameInfo &MFI) const;
+  int64_t assignSMEStackObjectOffsets(MachineFrameInfo &MFI) const;
   MCCFIInstruction
   createDefCFAExpressionFromSP(const TargetRegisterInfo &TRI,
                                const StackOffset &OffsetFromSP) const;

@@ -447,8 +447,9 @@ AArch64RegisterInfo::useFPForScavengingIndex(const MachineFunction &MF) const {
   const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   assert((!MF.getSubtarget<AArch64Subtarget>().hasSVE() ||
           AFI->hasCalculatedStackSizeSVE()) &&
-         "Expected SVE area to be calculated by this point");
-  return TFI.hasFP(MF) && !hasStackRealignment(MF) && !AFI->getStackSizeSVE();
+         "Expected SVE/SME area to be calculated by this point");
+  return TFI.hasFP(MF) && !hasStackRealignment(MF) && !AFI->getStackSizeSVE()
+         && !AFI->getStackSizeSME();
 }
 
 bool AArch64RegisterInfo::requiresFrameIndexScavenging(

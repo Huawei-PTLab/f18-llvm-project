@@ -310,6 +310,9 @@ AArch64FrameLowering::getStackIDForScalableVectors() const {
   return TargetStackID::ScalableVector;
 }
 
+TargetStackID::Value AArch64FrameLowering::getStackIDForScalableMatrix() const {
+  return TargetStackID::ScalableMatrix;
+}
 /// Returns the size of the fixed object area (allocated next to sp on entry)
 /// On Win64 this may include a var args area and an UnwindHelp object for EH.
 static unsigned getFixedObjectSize(const MachineFunction &MF,
@@ -334,6 +337,11 @@ static StackOffset getSVEStackSize(const MachineFunction &MF) {
   return StackOffset::getScalable((int64_t)AFI->getStackSizeSVE());
 }
 
+static StackOffset getSMEStackSize(const MachineFunction &MF) {
+  const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+  return StackOffset::getScalable((int64_t)AFI->getStackSizeSME());
+}
+
 bool AArch64FrameLowering::canUseRedZone(const MachineFunction &MF) const {
   if (!EnableRedZone)
     return false;
@@ -351,7 +359,7 @@ bool AArch64FrameLowering::canUseRedZone(const MachineFunction &MF) const {
   uint64_t NumBytes = AFI->getLocalStackSize();
 
   return !(MFI.hasCalls() || hasFP(MF) || NumBytes > RedZoneSize ||
-           getSVEStackSize(MF));
+           getSVEStackSize(MF) || getSMEStackSize(MF));
 }
 
 /// hasFP - Return true if the specified function should have a dedicated frame
@@ -696,6 +704,9 @@ bool AArch64FrameLowering::shouldCombineCSRLocalStackBump(
   // When there is an SVE area on the stack, always allocate the
   // callee-saves and spills/locals separately.
   if (getSVEStackSize(MF))
+    return false;
+
+  if (getSMEStackSize(MF))
     return false;
 
   return true;
@@ -1362,6 +1373,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     AFI->setTaggedBasePointerOffset(MFI.getStackSize());
 
   const StackOffset &SVEStackSize = getSVEStackSize(MF);
+  const StackOffset &SMEStackSize = getSMEStackSize(MF);
 
   // getStackSize() includes all the locals in its size calculation. We don't
   // include these locals when computing the stack size of a funclet, as they
@@ -1596,30 +1608,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     AllocateAfter = SVEStackSize - AllocateBefore;
   }
 
-  // Determine the number of SME tiles.
-  std::map<int, int> SMETiles;
-  for (int StackObj = MFI.getObjectIndexBegin();
-       StackObj < MFI.getObjectIndexEnd(); StackObj++) {
-    if (MFI.getStackID(StackObj) == TargetStackID::ScalableVector &&
-        MFI.getObjectAllocation(StackObj)) {
-      if (isa<ScalableMatrixType>(
-              *MFI.getObjectAllocation(StackObj)->getAllocatedType())) {
-        SMETiles[MFI.getObjectSize(StackObj)]++;
-      }
-    }
-  }
-
-  // For each different type of tile allocate prolog/epilog.
-  StackOffset AllocateSME;
-  for (auto const &b : SMETiles) {
-    unsigned size = b.first * b.second;
-    AllocateSME = StackOffset::getScalable(size);
-    emitSMEFrameOffset(MBB, CalleeSavesBegin, DL, AArch64::SP, AArch64::SP,
-                       -AllocateSME, TII, false, b.first,
-                       MachineInstr::FrameSetup);
-    AllocateBefore = AllocateBefore - AllocateSME;
-  }
-
+  // Allocate space for the callee saves (if any).
   emitFrameOffset(MBB, CalleeSavesBegin, DL, AArch64::SP, AArch64::SP,
                   -AllocateBefore, TII,
                   MachineInstr::FrameSetup);
@@ -1628,6 +1617,26 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   emitFrameOffset(MBB, CalleeSavesEnd, DL, AArch64::SP, AArch64::SP,
                   -AllocateAfter, TII,
                   MachineInstr::FrameSetup);
+
+  // Determine the Number of SME tiles
+  std::map<int, int> SMETiles;
+  for (int StackObj = MFI.getObjectIndexBegin();
+          StackObj < MFI.getObjectIndexEnd(); StackObj++) {
+    if (MFI.getStackID(StackObj) == TargetStackID::ScalableMatrix) {
+      SMETiles[MFI.getObjectSize(StackObj)]++;
+    }
+  }
+
+  // For each different type of tile allocate prolog/epilog
+  StackOffset AllocateSME, AllocateSMEBefore = SMEStackSize;
+  for (auto const &b : SMETiles) {
+      unsigned size = b.first * b.second;
+      AllocateSME =  StackOffset::getScalable(size);
+      emitSMEFrameOffset(MBB, CalleeSavesBegin, DL, AArch64::SP, AArch64::SP,
+                         -AllocateSME, TII, false,
+                         b.first, MachineInstr::FrameSetup);
+      AllocateSMEBefore = AllocateSMEBefore - AllocateSME;
+  }
 
   // Allocate space for the rest of the frame.
   if (NumBytes) {
@@ -1805,6 +1814,14 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
         StackOffset TotalSize =
             SVEStackSize + StackOffset::getFixed((int64_t)MFI.getStackSize());
         CFIIndex = MF.addFrameInst(createDefCFAExpressionFromSP(TRI, TotalSize));
+      } else if (SMEStackSize) {
+        const TargetSubtargetInfo &STI = MF.getSubtarget();
+        const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
+        StackOffset TotalSize =
+            SMEStackSize + SVEStackSize +
+            StackOffset::getFixed((int64_t)MFI.getStackSize());
+        CFIIndex =
+            MF.addFrameInst(createDefCFAExpressionFromSP(TRI, TotalSize));
       } else {
         // Encode the stack size of the leaf function.
         CFIIndex = MF.addFrameInst(
@@ -2025,6 +2042,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   }
 
   const StackOffset &SVEStackSize = getSVEStackSize(MF);
+  const StackOffset &SMEStackSize = getSMEStackSize(MF);
 
   // If there is a single SP update, insert it before the ret and we're done.
   if (CombineSPBump) {
@@ -2083,33 +2101,32 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
         NumBytes = 0;
       }
 
-      std::map<int, int> SMETiles;
-      for (int StackObj = MFI.getObjectIndexBegin();
-           StackObj < MFI.getObjectIndexEnd(); StackObj++) {
-        if (MFI.getStackID(StackObj) == TargetStackID::ScalableVector &&
-            MFI.getObjectAllocation(StackObj)) {
-          if (isa<ScalableMatrixType>(
-                  *MFI.getObjectAllocation(StackObj)->getAllocatedType())) {
-            SMETiles[MFI.getObjectSize(StackObj)]++;
-          }
-        }
-      }
-
-      StackOffset DeallocateSME;
-      for (auto const &b : SMETiles) {
-        unsigned size = b.first * b.second;
-        DeallocateSME = StackOffset::getScalable(size);
-        emitSMEFrameOffset(MBB, RestoreEnd, DL, AArch64::SP, AArch64::SP,
-                           DeallocateSME, TII, false, b.first,
-                           MachineInstr::FrameDestroy);
-        DeallocateAfter = DeallocateAfter - DeallocateSME;
-      }
-
       emitFrameOffset(MBB, RestoreBegin, DL, AArch64::SP, AArch64::SP,
                       DeallocateBefore, TII, MachineInstr::FrameDestroy);
 
       emitFrameOffset(MBB, RestoreEnd, DL, AArch64::SP, AArch64::SP,
                       DeallocateAfter, TII, MachineInstr::FrameDestroy);
+    }
+  }
+
+  StackOffset SMEDeallocAfter = SMEStackSize;
+  if (SMEStackSize) {
+    std::map<int, int> SMETiles;
+    for (int StackObj = MFI.getObjectIndexBegin();
+         StackObj < MFI.getObjectIndexEnd(); StackObj++) {
+      if (MFI.getStackID(StackObj) == TargetStackID::ScalableMatrix) {
+        SMETiles[MFI.getObjectSize(StackObj)]++;
+      }
+    }
+
+    StackOffset DeallocateSME;
+    for (auto const &b : SMETiles) {
+      unsigned size = b.first * b.second;
+      DeallocateSME = StackOffset::getScalable(size);
+      emitSMEFrameOffset(MBB, RestoreEnd, DL, AArch64::SP, AArch64::SP,
+                         DeallocateSME, TII, false, b.first,
+                         MachineInstr::FrameDestroy);
+      SMEDeallocAfter = SMEDeallocAfter - DeallocateSME;
     }
   }
 
@@ -2249,13 +2266,14 @@ StackOffset AArch64FrameLowering::resolveFrameIndexReference(
   int64_t ObjectOffset = MFI.getObjectOffset(FI);
   bool isFixed = MFI.isFixedObjectIndex(FI);
   bool isSVE = MFI.getStackID(FI) == TargetStackID::ScalableVector;
-  return resolveFrameOffsetReference(MF, ObjectOffset, isFixed, isSVE, FrameReg,
-                                     PreferFP, ForSimm);
+  bool isSME = MFI.getStackID(FI) == TargetStackID::ScalableMatrix;
+  return resolveFrameOffsetReference(MF, ObjectOffset, isFixed, isSVE, isSME,
+                                     FrameReg, PreferFP, ForSimm);
 }
 
 StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
     const MachineFunction &MF, int64_t ObjectOffset, bool isFixed, bool isSVE,
-    Register &FrameReg, bool PreferFP, bool ForSimm) const {
+    bool isSME, Register &FrameReg, bool PreferFP, bool ForSimm) const {
   const auto &MFI = MF.getFrameInfo();
   const auto *RegInfo = static_cast<const AArch64RegisterInfo *>(
       MF.getSubtarget().getRegisterInfo());
@@ -2268,13 +2286,14 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
       !isFixed && ObjectOffset >= -((int)AFI->getCalleeSavedStackSize(MFI));
 
   const StackOffset &SVEStackSize = getSVEStackSize(MF);
+  const StackOffset &SMEStackSize = getSMEStackSize(MF);
 
   // Use frame pointer to reference fixed objects. Use it for locals if
   // there are VLAs or a dynamically realigned SP (and thus the SP isn't
   // reliable as a base). Make sure useFPForScavengingIndex() does the
   // right thing for the emergency spill slot.
   bool UseFP = false;
-  if (AFI->hasStackFrame() && !isSVE) {
+  if (AFI->hasStackFrame() && !isSVE && !isSME) {
     // We shouldn't prefer using the FP when there is an SVE area
     // in between the FP and the non-SVE locals/spills.
     PreferFP &= !SVEStackSize;
@@ -2358,11 +2377,29 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
     return SPOffset;
   }
 
+  if (isSME) {
+    StackOffset FPOffset = StackOffset::get(
+        -AFI->getCalleeSaveBaseToFrameRecordOffset(), ObjectOffset);
+    StackOffset SPOffset =
+        SMEStackSize +
+        StackOffset::get(MFI.getStackSize() - AFI->getCalleeSavedStackSize(),
+                         ObjectOffset);
+    if (hasFP(MF) && (SPOffset.getFixed() ||
+                      FPOffset.getScalable() < SPOffset.getScalable() ||
+                      RegInfo->needsStackRealignment(MF))) {
+      FrameReg = RegInfo->getFrameRegister(MF);
+      return FPOffset;
+    }
+    FrameReg = RegInfo->hasBasePointer(MF) ? RegInfo->getBaseRegister()
+                                           : (unsigned)AArch64::SP;
+    return SPOffset;
+  }
+
   StackOffset ScalableOffset = {};
   if (UseFP && !(isFixed || isCSR))
-    ScalableOffset = -SVEStackSize;
+    ScalableOffset = -(SVEStackSize + SMEStackSize);
   if (!UseFP && (isFixed || isCSR))
-    ScalableOffset = SVEStackSize;
+    ScalableOffset = SVEStackSize + SMEStackSize;
 
   if (UseFP) {
     FrameReg = RegInfo->getFrameRegister(MF);
@@ -3066,14 +3103,17 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   // If any callee-saved registers are used, the frame cannot be eliminated.
   int64_t SVEStackSize =
       alignTo(SVECSStackSize + estimateSVEStackObjectOffsets(MFI), 16);
-  bool CanEliminateFrame = (SavedRegs.count() == 0) && !SVEStackSize;
 
+  int64_t SMEStackSize = alignTo(estimateSMEStackObjectOffsets(MFI), 16);
+
+  bool CanEliminateFrame =
+      (SavedRegs.count() == 0) && !SVEStackSize && !SMEStackSize;
   // The CSR spill slots have not been allocated yet, so estimateStackSize
   // won't include them.
   unsigned EstimatedStackSizeLimit = estimateRSStackSizeLimit(MF);
 
   // Conservatively always assume BigStack when there are SVE spills.
-  bool BigStack = SVEStackSize ||
+  bool BigStack = SVEStackSize || SMEStackSize ||
                   (EstimatedStackSize + CSStackSize) > EstimatedStackSizeLimit;
   if (BigStack || !CanEliminateFrame || RegInfo->cannotEliminateFrame(MF))
     AFI->setHasStackFrame(true);
@@ -3290,6 +3330,45 @@ int64_t AArch64FrameLowering::assignSVEStackObjectOffsets(
                                         true);
 }
 
+static int64_t determineSMEStackObjectOffsets(MachineFrameInfo &MFI,
+                                              bool AssignOffsets) {
+  auto Assign = [&MFI](int FI, int64_t Offset) {
+    LLVM_DEBUG(dbgs() << "alloc FI(" << FI << ") at SP[" << Offset << "]\n");
+    MFI.setObjectOffset(FI, Offset);
+  };
+
+  int64_t Offset = 0;
+  SmallVector<int, 8> ObjectsToAllocate;
+  for (int I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
+    if (MFI.getStackID(I) != TargetStackID::ScalableMatrix)
+      continue;
+
+    ObjectsToAllocate.push_back(I);
+  }
+
+  for (unsigned FI : ObjectsToAllocate) {
+    Align Alignment = MFI.getObjectAlign(FI);
+    if (Alignment > Align(16))
+      report_fatal_error(
+          "Alignment of scalable matrices > 16 bytes is not yet supported");
+
+    Offset = alignTo(Offset + MFI.getObjectSize(FI), Alignment);
+    if (AssignOffsets)
+      Assign(FI, -Offset);
+  }
+  return Offset;
+}
+
+int64_t AArch64FrameLowering::estimateSMEStackObjectOffsets(
+    MachineFrameInfo &MFI) const {
+  return determineSMEStackObjectOffsets(MFI, false);
+}
+
+int64_t
+AArch64FrameLowering::assignSMEStackObjectOffsets(MachineFrameInfo &MFI) const {
+  return determineSMEStackObjectOffsets(MFI, true);
+}
+
 void AArch64FrameLowering::processFunctionBeforeFrameFinalized(
     MachineFunction &MF, RegScavenger *RS) const {
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -3304,6 +3383,9 @@ void AArch64FrameLowering::processFunctionBeforeFrameFinalized(
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   AFI->setStackSizeSVE(alignTo(SVEStackSize, 16U));
   AFI->setMinMaxSVECSFrameIndex(MinCSFrameIndex, MaxCSFrameIndex);
+
+  uint64_t SMEStackSize = assignSMEStackObjectOffsets(MFI);
+  AFI->setStackSizeSME(alignTo(SMEStackSize, 16U));
 
   // If this function isn't doing Win64-style C++ EH, we don't need to do
   // anything.
@@ -3542,8 +3624,8 @@ void TagStoreEdit::emitCode(MachineBasicBlock::iterator &InsertI,
 
   Register Reg;
   FrameRegOffset = TFI->resolveFrameOffsetReference(
-      *MF, FirstTagStore.Offset, false /*isFixed*/, false /*isSVE*/, Reg,
-      /*PreferFP=*/false, /*ForSimm=*/true);
+      *MF, FirstTagStore.Offset, false /*isFixed*/, false /*isSVE*/,
+      false /*isSME*/, Reg, /*PreferFP=*/false, /*ForSimm=*/true);
   FrameReg = Reg;
   FrameRegUpdate = None;
 

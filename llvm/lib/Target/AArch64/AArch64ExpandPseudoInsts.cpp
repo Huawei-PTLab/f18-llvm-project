@@ -1438,8 +1438,8 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      int BaseOffset = -AFI->getTaggedBasePointerOffset();
      Register FrameReg;
      StackOffset FrameRegOffset = TFI->resolveFrameOffsetReference(
-         MF, BaseOffset, false /*isFixed*/, false /*isSVE*/, FrameReg,
-         /*PreferFP=*/false,
+         MF, BaseOffset, false /*isFixed*/, false /*isSVE*/, false /*isSME*/,
+         FrameReg, /*PreferFP=*/false,
          /*ForSimm=*/true);
      Register SrcReg = FrameReg;
      if (FrameRegOffset) {

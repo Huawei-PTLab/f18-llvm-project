@@ -124,6 +124,11 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// HasCalculatedStackSizeSVE indicates whether StackSizeSVE is valid.
   bool HasCalculatedStackSizeSVE = false;
 
+  /// SME stack size
+  uint64_t StackSizeSME = 0;
+
+  /// HasCalculatedStackSizeSME indicates whether StackSizeSME is valid.
+  bool HasCalculatedStackSizeSME = false;
   /// Has a value when it is known whether or not the function uses a
   /// redzone, and no value otherwise.
   /// Initialized during frame lowering, unless the function has the noredzone
@@ -199,6 +204,15 @@ public:
   }
 
   uint64_t getStackSizeSVE() const { return StackSizeSVE; }
+
+  bool hasCalculatedStackSizeSME() const { return HasCalculatedStackSizeSME; }
+
+  void setStackSizeSME(uint64_t S) {
+    HasCalculatedStackSizeSME = true;
+    StackSizeSME = S;
+  }
+
+  uint64_t getStackSizeSME() const { return StackSizeSME; }
 
   bool hasStackFrame() const { return HasStackFrame; }
   void setHasStackFrame(bool s) { HasStackFrame = s; }
