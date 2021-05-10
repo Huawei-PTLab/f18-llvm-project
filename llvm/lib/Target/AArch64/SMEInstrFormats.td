@@ -493,13 +493,13 @@ defm LD1H_ZaXI : SMEPseudoLoad<TileVectorOpH8, TileVectorOpH16, TileVectorOpH32,
 defm LD1V_ZaXI : SMEPseudoLoad<TileVectorOpV8, TileVectorOpV16, TileVectorOpV32, TileVectorOpV64, TileVectorOpV128>;
 
 multiclass unpred_store_sme<ValueType Ty, Instruction StoreInst> {
-  def _fi : Pat<(store (Ty ZAZeroOperand:$Za), (am_sve_fi GPR64sp:$base, simm9:$offset)),
+  def : Pat<(store (Ty ZAZeroOperand:$Za), (am_sve_fi GPR64sp:$base, simm9:$offset)),
                 (StoreInst ZAZeroOperand:$Za, GPR64sp:$base, simm9:$offset, (IMPLICIT_DEF),
                     (IMPLICIT_DEF), (IMPLICIT_DEF), (IMPLICIT_DEF))>;
 }
 
 multiclass unpred_store_sme_q<ValueType Ty, Instruction StoreInst> {
-  def _fi : Pat<(store (Ty MPR128:$Za), (am_sve_fi GPR64sp:$base, simm9:$offset)),
+  def : Pat<(store (Ty MPR128:$Za), (am_sve_fi GPR64sp:$base, simm9:$offset)),
                 (StoreInst MPR128:$Za, GPR64sp:$base, simm9:$offset, (IMPLICIT_DEF),
                     (IMPLICIT_DEF), (IMPLICIT_DEF), (IMPLICIT_DEF))>;
 }
@@ -540,8 +540,24 @@ defm ST1V_ZaXI : SMEPseudoStore<TileVectorOpV8, TileVectorOpV16, TileVectorOpV32
 
 // Pseudo instruction for prologue and epilogue generation of stack frame allocation
 // for SME tiles.
-def SME_ADDVL: Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm), (ins GPR64sp:$Rn, simm6_32b:$imm6), []>, Sched<[]>;
-def SME_FI: Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm), (ins GPR64sp:$Rn), []>, Sched<[]>;
+multiclass PseudoAddVL{
+  def _B : Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm), (ins GPR64sp:$Rn, simm6_32b:$imm6), []>, Sched<[]>;
+  def _H : Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm), (ins GPR64sp:$Rn, simm6_32b:$imm6), []>, Sched<[]>;
+  def _W : Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm), (ins GPR64sp:$Rn, simm6_32b:$imm6), []>, Sched<[]>;
+  def _D : Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm), (ins GPR64sp:$Rn, simm6_32b:$imm6), []>, Sched<[]>;
+}
+
+defm SME_ADDVL : PseudoAddVL;
+
+// Pseudo instruction for frame index.
+multiclass PseudoFrameIndex{
+  def _B : Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm), (ins GPR64sp:$Rn), []>, Sched<[]>;
+  def _H : Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm), (ins GPR64sp:$Rn), []>, Sched<[]>;
+  def _W : Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm), (ins GPR64sp:$Rn), []>, Sched<[]>;
+  def _D : Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm), (ins GPR64sp:$Rn), []>, Sched<[]>;
+}
+
+defm SME_FI : PseudoFrameIndex;
 
 //===----------------------------------------------------------------------===//
 // Move instructions

@@ -94,8 +94,10 @@ private:
                           MachineBasicBlock::iterator &NextMBBI, unsigned Opc,
                           unsigned PtrueOpc, unsigned CntOpc);
   bool expandSMEStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                      MachineBasicBlock::iterator &NextMBBI, unsigned Opc);
-  bool expandSMEFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
+                      MachineBasicBlock::iterator &NextMBBI, unsigned Opc,
+                      unsigned CntOpc);
+  bool expandSMEFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                   unsigned Opc);
 };
 
 } // end anonymous namespace
@@ -815,11 +817,19 @@ bool AArch64ExpandPseudo::expandStoreSwiftAsyncContext(
   return true;
 }
 
+// Pseudo instruction SME_ADDVL expansion for the prologue and epilogue.
 bool AArch64ExpandPseudo::expandSMEStack(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator MBBI,
                                          MachineBasicBlock::iterator &NextMBBI,
-                                         unsigned Opc) {
-  // $sp, dead $x8 = frame-setup SME_ADDVL $sp, -4
+                                         unsigned Opc, unsigned CntOpc) {
+  // The instruction in the MBB will be of this form.
+  // $sp, dead $xn = frame-setup SME_ADDVL $spsrc, imm
+  // It will be converted into the sequence of following instructions.
+  //     cnt(type) $xn
+  // L1:
+  //     addvl sp, spsrc, imm
+  //     sub xn, xn, 1
+  //     cbz xn, L1
   MachineInstr &MI = *MBBI;
   unsigned Spdst = MI.getOperand(0).getReg();
   unsigned Xn = MI.getOperand(1).getReg();
@@ -830,7 +840,7 @@ bool AArch64ExpandPseudo::expandSMEStack(MachineBasicBlock &MBB,
   auto LoopBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
   auto DoneBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
 
-  BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::CNTW_XPiI))
+  BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(CntOpc))
       .addReg(Xn)
       .addImm(31)
       .addImm(1);
@@ -866,30 +876,24 @@ bool AArch64ExpandPseudo::expandSMEStack(MachineBasicBlock &MBB,
   return true;
 }
 
+// Expanding the pseudo instruction for the frame index of SME tiles.
 bool AArch64ExpandPseudo::expandSMEFI(MachineBasicBlock &MBB,
-                                      MachineBasicBlock::iterator MBBI) {
+                                      MachineBasicBlock::iterator MBBI,
+                                      unsigned Opc) {
   // The incoming frame index instruction will be like below.
-  // $x8, $x9, $x10 = SME_FI $bp
+  // $x8, $x9 = SME_FI $sp
   //
   // This will converted to the following sequence.
   // cnt(type) $x9
-  // cntb $x10
-  // madd $x8, $x9, $x10, $bp
-  //
-  // For SME_FI_Q, as there is no support CNT instruction for Qtype, using
-  // CNTD instruction with ASR to shift the value and obtain correct CNT value.
-  // So for SME_FI_Q the sequence is:
-  // cntd $x9
-  // asr x9, x9, #1
-  // cntb $x10
-  // madd $x8, $x9, $x10, $bp
+  // cntb $x8
+  // madd $x8, $x8, $x9, $sp
   MachineInstr &MI = *MBBI;
   unsigned Xn = MI.getOperand(0).getReg();
   unsigned Xm = MI.getOperand(1).getReg();
   unsigned Xs = MI.getOperand(2).getReg();
   unsigned Xnsrc = MI.getOperand(3).getReg();
 
-  BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::CNTW_XPiI))
+  BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc))
       .addReg(Xm, RegState::Define)
       .addImm(31)
       .addImm(1);
@@ -899,8 +903,6 @@ bool AArch64ExpandPseudo::expandSMEFI(MachineBasicBlock &MBB,
       .addImm(31)
       .addImm(1);
 
-  // x9 = sp + x9 * x8
-  // madd Rd, Rn, Rm, Ra ==> Rd = Ra +(Rn,Rm)
   BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::MADDXrrr))
       .addReg(Xn, RegState::Define)
       .addReg(Xm)
@@ -1550,10 +1552,26 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
    case AArch64::ST1V_ZaXI_Q:
      return expandSMESpillFill(MBB, MBBI, NextMBBI, AArch64::ST1_MXIPXX_V_Q,
                                AArch64::PTRUE_D, AArch64::CNTD_XPiI);
-   case AArch64::SME_ADDVL:
-     return expandSMEStack(MBB, MBBI, NextMBBI, AArch64::ADDVL_XXI);
-   case AArch64::SME_FI:
-     return expandSMEFI(MBB, MBBI);
+   case AArch64::SME_ADDVL_B:
+     return expandSMEStack(MBB, MBBI, NextMBBI, AArch64::ADDVL_XXI,
+                           AArch64::CNTB_XPiI);
+   case AArch64::SME_ADDVL_H:
+     return expandSMEStack(MBB, MBBI, NextMBBI, AArch64::ADDVL_XXI,
+                           AArch64::CNTH_XPiI);
+   case AArch64::SME_ADDVL_W:
+     return expandSMEStack(MBB, MBBI, NextMBBI, AArch64::ADDVL_XXI,
+                           AArch64::CNTW_XPiI);
+   case AArch64::SME_ADDVL_D:
+     return expandSMEStack(MBB, MBBI, NextMBBI, AArch64::ADDVL_XXI,
+                           AArch64::CNTD_XPiI);
+   case AArch64::SME_FI_B:
+     return expandSMEFI(MBB, MBBI, AArch64::CNTB_XPiI);
+   case AArch64::SME_FI_H:
+     return expandSMEFI(MBB, MBBI, AArch64::CNTH_XPiI);
+   case AArch64::SME_FI_W:
+     return expandSMEFI(MBB, MBBI, AArch64::CNTW_XPiI);
+   case AArch64::SME_FI_D:
+     return expandSMEFI(MBB, MBBI, AArch64::CNTD_XPiI);
   }
   return false;
 }

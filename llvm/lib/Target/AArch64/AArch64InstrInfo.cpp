@@ -4133,6 +4133,171 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
   }
 }
 
+// Helper function to emit a frame offset addjustment from a given pointer
+// for SME instructions. This method is duplicate of emitFrameOffsetAdj
+// for SME specific CodeGen.
+static void emitSMEFrameOffsetAdj(MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator MBBI,
+                                  const DebugLoc &DL, unsigned DestReg,
+                                  unsigned SrcReg, int64_t Offset, unsigned Opc,
+                                  const TargetInstrInfo *TII,
+                                  MachineInstr::MIFlag Flag) {
+  int Sign = 1;
+  unsigned MaxEncoding, ShiftSize;
+  switch (Opc) {
+  case AArch64::ADDXri:
+  case AArch64::ADDSXri:
+  case AArch64::SUBXri:
+  case AArch64::SUBSXri:
+    MaxEncoding = 0xfff;
+    ShiftSize = 12;
+    break;
+  case AArch64::SME_FI_B:
+  case AArch64::SME_FI_H:
+  case AArch64::SME_FI_W:
+  case AArch64::SME_FI_D:
+  case AArch64::SME_ADDVL_B:
+  case AArch64::SME_ADDVL_H:
+  case AArch64::SME_ADDVL_W:
+  case AArch64::SME_ADDVL_D:
+    MaxEncoding = 31;
+    ShiftSize = 0;
+    if (Offset < 0) {
+      MaxEncoding = 32;
+      Sign = -1;
+      Offset = -Offset;
+    }
+    break;
+  default:
+    llvm_unreachable("Unsupported opcode");
+  }
+
+  const unsigned MaxEncodableValue = MaxEncoding << ShiftSize;
+  Register TmpReg = DestReg;
+  if (TmpReg == AArch64::XZR)
+    TmpReg = MBB.getParent()->getRegInfo().createVirtualRegister(
+        &AArch64::GPR64RegClass);
+  do {
+    uint64_t ThisVal = std::min<uint64_t>(Offset, MaxEncodableValue);
+    unsigned LocalShiftSize = 0;
+    if (ThisVal > MaxEncoding) {
+      ThisVal = ThisVal >> ShiftSize;
+      LocalShiftSize = ShiftSize;
+    }
+    assert((ThisVal >> ShiftSize) <= MaxEncoding &&
+           "Encoding cannot handle value that big");
+    Offset -= ThisVal << LocalShiftSize;
+    if (Offset == 0)
+      TmpReg = DestReg;
+
+    // Build instruction based on the Opc.
+    auto MBI = BuildMI(MBB, MBBI, DL, TII->get(Opc), TmpReg);
+
+    // Create a scratch reg to be used for SME_FI and SME_ADDVL instructions.
+    Register SMETempReg = MBB.getParent()->getRegInfo().createVirtualRegister(
+        &AArch64::GPR64RegClass);
+
+    if (Opc == AArch64::SME_FI_B || Opc == AArch64::SME_FI_H ||
+        Opc == AArch64::SME_FI_W || Opc == AArch64::SME_FI_D) {
+      MBI = MBI.addReg(SMETempReg, RegState::Define);
+      MBI = MBI.addReg(SrcReg);
+    } else if (Opc == AArch64::SME_ADDVL_B || Opc == AArch64::SME_ADDVL_H ||
+               Opc == AArch64::SME_ADDVL_W || Opc == AArch64::SME_ADDVL_D) {
+      MBI = MBI.addReg(SMETempReg, RegState::Define);
+      MBI = MBI.addReg(SrcReg);
+      MBI = MBI.addImm(Sign * (int)ThisVal);
+    } else {
+      MBI = MBI.addReg(SrcReg);
+      MBI = MBI.addImm(Sign * (int)ThisVal);
+    }
+
+    if (ShiftSize)
+      MBI = MBI.addImm(
+          AArch64_AM::getShifterImm(AArch64_AM::LSL, LocalShiftSize));
+    MBI = MBI.setMIFlag(Flag);
+    SrcReg = TmpReg;
+  } while (Offset);
+}
+
+// This method is similar to the emitFrameOffset Method.
+void llvm::emitSMEFrameOffset(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MBBI,
+                              const DebugLoc &DL, unsigned DestReg,
+                              unsigned SrcReg, StackOffset Offset,
+                              const TargetInstrInfo *TII, bool IsEliminateFI,
+                              int64_t size, MachineInstr::MIFlag Flag,
+                              bool SetNZCV) {
+  int64_t Bytes, NumMatrices;
+  unsigned Opc;
+
+  // If method is called for eliminating frameindex then insert SME_FI
+  // based on the type of spill/fill instruction.
+  // Else insert SME_ADDVL for the prolog and epilog.
+  if (IsEliminateFI) {
+    size = 16;
+    switch (MBBI->getOpcode()) {
+    default:
+      llvm_unreachable("Unknown opcode");
+    case AArch64::LD1H_ZaXI_B:
+    case AArch64::LD1V_ZaXI_B:
+    case AArch64::ST1H_ZaXI_B:
+    case AArch64::ST1V_ZaXI_B:
+      Opc = AArch64::SME_FI_B;
+      break;
+    case AArch64::LD1H_ZaXI_H:
+    case AArch64::LD1V_ZaXI_H:
+    case AArch64::ST1H_ZaXI_H:
+    case AArch64::ST1V_ZaXI_H:
+      Opc = AArch64::SME_FI_H;
+      break;
+    case AArch64::LD1H_ZaXI_W:
+    case AArch64::LD1V_ZaXI_W:
+    case AArch64::ST1H_ZaXI_W:
+    case AArch64::ST1V_ZaXI_W:
+      Opc = AArch64::SME_FI_W;
+      break;
+    case AArch64::LD1H_ZaXI_D:
+    case AArch64::LD1V_ZaXI_D:
+    case AArch64::ST1H_ZaXI_D:
+    case AArch64::ST1V_ZaXI_D:
+      Opc = AArch64::SME_FI_D;
+      break;
+    }
+  } else {
+    if (size == 32)
+      Opc = AArch64::SME_ADDVL_D;
+    if (size == 64)
+      Opc = AArch64::SME_ADDVL_W;
+    if (size == 128)
+      Opc = AArch64::SME_ADDVL_H;
+    if (size == 256)
+      Opc = AArch64::SME_ADDVL_B;
+  }
+
+  // Compute the number of matrices based on the size of the SME tile.
+  Bytes = Offset.getFixed();
+  NumMatrices = Offset.getScalable() / size;
+
+  if (Bytes || (!Offset && SrcReg != DestReg)) {
+    assert((DestReg != AArch64::SP || Bytes % 8 == 0) &&
+           "SP increment/decrement not 8-byte aligned");
+    Opc = SetNZCV ? AArch64::ADDSXri : AArch64::ADDXri;
+    if (Bytes < 0) {
+      Bytes = -Bytes;
+      Opc = SetNZCV ? AArch64::SUBSXri : AArch64::SUBXri;
+    }
+    emitSMEFrameOffsetAdj(MBB, MBBI, DL, DestReg, SrcReg, Bytes, Opc, TII,
+                          Flag);
+    SrcReg = DestReg;
+  }
+
+  if (NumMatrices) {
+    emitSMEFrameOffsetAdj(MBB, MBBI, DL, DestReg, SrcReg, NumMatrices, Opc, TII,
+                          Flag);
+    SrcReg = DestReg;
+  }
+}
+
 MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
     MachineBasicBlock::iterator InsertPt, int FrameIndex,

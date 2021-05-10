@@ -337,6 +337,7 @@ static StackOffset getSVEStackSize(const MachineFunction &MF) {
   return StackOffset::getScalable((int64_t)AFI->getStackSizeSVE());
 }
 
+// Returns the size of the SME stackframe.
 static StackOffset getSMEStackSize(const MachineFunction &MF) {
   const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   return StackOffset::getScalable((int64_t)AFI->getStackSizeSME());
@@ -1126,6 +1127,43 @@ bool AArch64FrameLowering::isSMESpillFillOp(
   }
 }
 
+// Emit the pseudo instruction sequence for the prolog/epilog of a
+// function with SME objects. Given the size of the SME stack, calculate
+// the number of SME tiles of each type, and emit the corresponding
+// pseudo instructions to allocate or deallocate the stack.
+static void emitSMEPrologEpilog(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MBBI,
+                                MachineFunction &MF, const DebugLoc &DL,
+                                const StackOffset &SMEStackSize,
+                                const TargetInstrInfo *TII, bool prolog) {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  // Determine the Number of SME tiles.
+  std::map<int, int> SMETiles;
+  for (int StackObj = MFI.getObjectIndexBegin();
+       StackObj < MFI.getObjectIndexEnd(); StackObj++) {
+    if (MFI.getStackID(StackObj) == TargetStackID::ScalableMatrix) {
+      SMETiles[MFI.getObjectSize(StackObj)]++;
+    }
+  }
+
+  // For each tile type, allocate/deallocate the corresponding stack area.
+  StackOffset AllocDeallocSME, StackSize = SMEStackSize;
+  for (auto const &b : SMETiles) {
+    int64_t size = b.first * b.second;
+    AllocDeallocSME = StackOffset::getScalable(size);
+    if (prolog)
+      emitSMEFrameOffset(MBB, MBBI, DL, AArch64::SP, AArch64::SP,
+                         -AllocDeallocSME, TII, false, b.first,
+                         MachineInstr::FrameSetup);
+    else
+      emitSMEFrameOffset(MBB, MBBI, DL, AArch64::SP, AArch64::SP,
+                         AllocDeallocSME, TII, false, b.first,
+                         MachineInstr::FrameDestroy);
+    StackSize = StackSize - AllocDeallocSME;
+  }
+}
+
 // Convenience function to determine whether I is an SVE callee save.
 static bool IsSVECalleeSave(MachineBasicBlock::iterator I) {
   switch (I->getOpcode()) {
@@ -1137,137 +1175,6 @@ static bool IsSVECalleeSave(MachineBasicBlock::iterator I) {
   case AArch64::LDR_PXI:
     return I->getFlag(MachineInstr::FrameSetup) ||
            I->getFlag(MachineInstr::FrameDestroy);
-  }
-}
-
-static void emitSMEFrameOffsetAdj(MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator MBBI,
-                                  const DebugLoc &DL, unsigned DestReg,
-                                  unsigned SrcReg, int64_t Offset, unsigned Opc,
-                                  const TargetInstrInfo *TII,
-                                  MachineInstr::MIFlag Flag) {
-  int Sign = 1;
-  unsigned MaxEncoding, ShiftSize;
-  switch (Opc) {
-  case AArch64::ADDXri:
-  case AArch64::ADDSXri:
-  case AArch64::SUBXri:
-  case AArch64::SUBSXri:
-    MaxEncoding = 0xfff;
-    ShiftSize = 12;
-    break;
-  case AArch64::SME_FI:
-  case AArch64::SME_ADDVL:
-    MaxEncoding = 31;
-    ShiftSize = 0;
-    if (Offset < 0) {
-      MaxEncoding = 32;
-      Sign = -1;
-      Offset = -Offset;
-    }
-    break;
-  default:
-    llvm_unreachable("Unsupported opcode");
-  }
-
-  const unsigned MaxEncodableValue = MaxEncoding << ShiftSize;
-  Register TmpReg = DestReg;
-  if (TmpReg == AArch64::XZR)
-    TmpReg = MBB.getParent()->getRegInfo().createVirtualRegister(
-        &AArch64::GPR64RegClass);
-  do {
-    uint64_t ThisVal = std::min<uint64_t>(Offset, MaxEncodableValue);
-    unsigned LocalShiftSize = 0;
-    if (ThisVal > MaxEncoding) {
-      ThisVal = ThisVal >> ShiftSize;
-      LocalShiftSize = ShiftSize;
-    }
-    assert((ThisVal >> ShiftSize) <= MaxEncoding &&
-           "Encoding cannot handle value that big");
-
-    Offset -= ThisVal << LocalShiftSize;
-    if (Offset == 0)
-      TmpReg = DestReg;
-
-    auto MBI = BuildMI(MBB, MBBI, DL, TII->get(Opc), TmpReg);
-
-    Register SMETempReg = MBB.getParent()->getRegInfo().createVirtualRegister(
-        &AArch64::GPR64RegClass);
-
-    if (Opc == AArch64::SME_FI) {
-      MBI = MBI.addReg(SMETempReg, RegState::Define);
-      MBI = MBI.addReg(SrcReg);
-    } else if (Opc == AArch64::SME_ADDVL) {
-      MBI = MBI.addReg(SMETempReg, RegState::Define);
-      MBI = MBI.addReg(SrcReg);
-      MBI = MBI.addImm(Sign * (int)ThisVal);
-    } else {
-      MBI = MBI.addReg(SrcReg);
-      MBI = MBI.addImm(Sign * (int)ThisVal);
-    }
-    if (ShiftSize)
-      MBI = MBI.addImm(
-          AArch64_AM::getShifterImm(AArch64_AM::LSL, LocalShiftSize));
-    MBI = MBI.setMIFlag(Flag);
-
-    SrcReg = TmpReg;
-  } while (Offset);
-}
-
-static void decomposeSMEStackOffsetForFrameOffsets(const StackOffset &Offset,
-                                                   int64_t &NumBytes,
-                                                   int64_t &NumPredicateVectors,
-                                                   int64_t &NumDataVectors,
-                                                   int64_t size) {
-  assert(Offset.getScalable() % 2 == 0 && "Invalid frame offset");
-
-  NumBytes = Offset.getFixed();
-  NumDataVectors = 0;
-  NumPredicateVectors = Offset.getScalable() / 2;
-
-  if (NumPredicateVectors % 8 == 0 || NumPredicateVectors < -64 ||
-      NumPredicateVectors > 62) {
-    NumDataVectors = NumPredicateVectors / size;
-  }
-}
-
-void AArch64FrameLowering::emitSMEFrameOffset(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    const DebugLoc &DL, unsigned DestReg, unsigned SrcReg, StackOffset Offset,
-    const TargetInstrInfo *TII, bool IsEliminateFI, unsigned size,
-    MachineInstr::MIFlag Flag, bool SetNZCV) const {
-  int64_t Bytes, NumPredicateVectors, NumDataVectors;
-  unsigned Opc;
-  int64_t RegSize;
-
-  if (IsEliminateFI) {
-    RegSize = 8;
-    Opc = AArch64::SME_FI;
-  } else {
-    RegSize = size / 2;
-    Opc = AArch64::SME_ADDVL;
-  }
-
-  decomposeSMEStackOffsetForFrameOffsets(Offset, Bytes, NumPredicateVectors,
-                                         NumDataVectors, RegSize);
-
-  if (Bytes || (!Offset && SrcReg != DestReg)) {
-    assert((DestReg != AArch64::SP || Bytes % 8 == 0) &&
-           "SP increment/decrement not 8-byte aligned");
-    Opc = SetNZCV ? AArch64::ADDSXri : AArch64::ADDXri;
-    if (Bytes < 0) {
-      Bytes = -Bytes;
-      Opc = SetNZCV ? AArch64::SUBSXri : AArch64::SUBXri;
-    }
-    emitSMEFrameOffsetAdj(MBB, MBBI, DL, DestReg, SrcReg, Bytes, Opc, TII,
-                          Flag);
-    SrcReg = DestReg;
-  }
-
-  if (NumDataVectors) {
-    emitSMEFrameOffsetAdj(MBB, MBBI, DL, DestReg, SrcReg, NumDataVectors, Opc,
-                          TII, Flag);
-    SrcReg = DestReg;
   }
 }
 
@@ -1618,25 +1525,8 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
                   -AllocateAfter, TII,
                   MachineInstr::FrameSetup);
 
-  // Determine the Number of SME tiles
-  std::map<int, int> SMETiles;
-  for (int StackObj = MFI.getObjectIndexBegin();
-          StackObj < MFI.getObjectIndexEnd(); StackObj++) {
-    if (MFI.getStackID(StackObj) == TargetStackID::ScalableMatrix) {
-      SMETiles[MFI.getObjectSize(StackObj)]++;
-    }
-  }
-
-  // For each different type of tile allocate prolog/epilog
-  StackOffset AllocateSME, AllocateSMEBefore = SMEStackSize;
-  for (auto const &b : SMETiles) {
-      unsigned size = b.first * b.second;
-      AllocateSME =  StackOffset::getScalable(size);
-      emitSMEFrameOffset(MBB, CalleeSavesBegin, DL, AArch64::SP, AArch64::SP,
-                         -AllocateSME, TII, false,
-                         b.first, MachineInstr::FrameSetup);
-      AllocateSMEBefore = AllocateSMEBefore - AllocateSME;
-  }
+  // Call to SME prolog/epilog inserter.
+  emitSMEPrologEpilog(MBB, CalleeSavesEnd, MF, DL, SMEStackSize, TII, true);
 
   // Allocate space for the rest of the frame.
   if (NumBytes) {
@@ -1808,18 +1698,19 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
           .setMIFlags(MachineInstr::FrameSetup);
     } else {
       unsigned CFIIndex;
-      if (SVEStackSize) {
-        const TargetSubtargetInfo &STI = MF.getSubtarget();
-        const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
-        StackOffset TotalSize =
-            SVEStackSize + StackOffset::getFixed((int64_t)MFI.getStackSize());
-        CFIIndex = MF.addFrameInst(createDefCFAExpressionFromSP(TRI, TotalSize));
-      } else if (SMEStackSize) {
+      if (SMEStackSize) {
         const TargetSubtargetInfo &STI = MF.getSubtarget();
         const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
         StackOffset TotalSize =
             SMEStackSize + SVEStackSize +
             StackOffset::getFixed((int64_t)MFI.getStackSize());
+        CFIIndex =
+            MF.addFrameInst(createDefCFAExpressionFromSP(TRI, TotalSize));
+      } else if (SVEStackSize) {
+        const TargetSubtargetInfo &STI = MF.getSubtarget();
+        const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
+        StackOffset TotalSize =
+            SVEStackSize + StackOffset::getFixed((int64_t)MFI.getStackSize());
         CFIIndex =
             MF.addFrameInst(createDefCFAExpressionFromSP(TRI, TotalSize));
       } else {
@@ -2068,8 +1959,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   if (int64_t CalleeSavedSize = AFI->getSVECalleeSavedStackSize()) {
     RestoreBegin = std::prev(RestoreEnd);
     while (RestoreBegin != MBB.begin() &&
-           (IsSVECalleeSave(std::prev(RestoreBegin)) ||
-            isSMEOpcode(std::prev(RestoreBegin))))
+           (IsSVECalleeSave(std::prev(RestoreBegin))))
       --RestoreBegin;
 
     assert(IsSVECalleeSave(RestoreBegin) &&
@@ -2109,25 +1999,9 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     }
   }
 
-  StackOffset SMEDeallocAfter = SMEStackSize;
   if (SMEStackSize) {
-    std::map<int, int> SMETiles;
-    for (int StackObj = MFI.getObjectIndexBegin();
-         StackObj < MFI.getObjectIndexEnd(); StackObj++) {
-      if (MFI.getStackID(StackObj) == TargetStackID::ScalableMatrix) {
-        SMETiles[MFI.getObjectSize(StackObj)]++;
-      }
-    }
-
-    StackOffset DeallocateSME;
-    for (auto const &b : SMETiles) {
-      unsigned size = b.first * b.second;
-      DeallocateSME = StackOffset::getScalable(size);
-      emitSMEFrameOffset(MBB, RestoreEnd, DL, AArch64::SP, AArch64::SP,
-                         DeallocateSME, TII, false, b.first,
-                         MachineInstr::FrameDestroy);
-      SMEDeallocAfter = SMEDeallocAfter - DeallocateSME;
-    }
+    // Deallocate SME stack space.
+    emitSMEPrologEpilog(MBB, RestoreEnd, MF, DL, SMEStackSize, TII, false);
   }
 
   if (!hasFP(MF)) {
@@ -2377,19 +2251,19 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
     return SPOffset;
   }
 
+  // Resolve frame offset for SME.
+  // Fp-relative : calleesaves + SVEarea + ObjectOffset.
+  // Sp-relative : stacksize - calleesaves - SVEStacksize + ObjectOffset.
+  // If we have FP and no SME stack area then use FP, hence calculating
+  // only SPOffset and using it here. Using SP is beneficial for SME
+  // stack area access.
   if (isSME) {
-    StackOffset FPOffset = StackOffset::get(
-        -AFI->getCalleeSaveBaseToFrameRecordOffset(), ObjectOffset);
     StackOffset SPOffset =
         SMEStackSize +
         StackOffset::get(MFI.getStackSize() - AFI->getCalleeSavedStackSize(),
-                         ObjectOffset);
-    if (hasFP(MF) && (SPOffset.getFixed() ||
-                      FPOffset.getScalable() < SPOffset.getScalable() ||
-                      RegInfo->needsStackRealignment(MF))) {
-      FrameReg = RegInfo->getFrameRegister(MF);
-      return FPOffset;
-    }
+                         ObjectOffset) -
+        SVEStackSize;
+
     FrameReg = RegInfo->hasBasePointer(MF) ? RegInfo->getBaseRegister()
                                            : (unsigned)AArch64::SP;
     return SPOffset;
@@ -3330,6 +3204,7 @@ int64_t AArch64FrameLowering::assignSVEStackObjectOffsets(
                                         true);
 }
 
+// Determine the SME stack object offsets based on size of each object.
 static int64_t determineSMEStackObjectOffsets(MachineFrameInfo &MFI,
                                               bool AssignOffsets) {
   auto Assign = [&MFI](int FI, int64_t Offset) {
@@ -3384,6 +3259,7 @@ void AArch64FrameLowering::processFunctionBeforeFrameFinalized(
   AFI->setStackSizeSVE(alignTo(SVEStackSize, 16U));
   AFI->setMinMaxSVECSFrameIndex(MinCSFrameIndex, MaxCSFrameIndex);
 
+  // Retrieve the SME stacksize and assign it to the AArch64MachineFunctionInfo.
   uint64_t SMEStackSize = assignSMEStackObjectOffsets(MFI);
   AFI->setStackSizeSME(alignTo(SMEStackSize, 16U));
 

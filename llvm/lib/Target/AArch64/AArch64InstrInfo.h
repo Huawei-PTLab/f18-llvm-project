@@ -374,6 +374,16 @@ void emitFrameOffset(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                      bool SetNZCV = false, bool NeedsWinCFI = false,
                      bool *HasWinCFI = nullptr);
 
+/// emitSMEFrameOffset - Emit instructions as needed to set DestReg to SrcReg
+/// plus offset. Intended use in the prolog/epilog insertion pass.
+void emitSMEFrameOffset(MachineBasicBlock &MBB,
+                        MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
+                        unsigned DestReg, unsigned SrcReg, StackOffset Offset,
+                        const TargetInstrInfo *TII, bool IsEliminateFI,
+                        int64_t size = 0,
+                        MachineInstr::MIFlag Flag = MachineInstr::NoFlags,
+                        bool SetNZCV = false);
+
 /// rewriteAArch64FrameIndex - Rewrite MI to access 'Offset' bytes from the
 /// FP. Return false if the offset could not be handled directly in MI, and
 /// return the left-over portion by reference.
