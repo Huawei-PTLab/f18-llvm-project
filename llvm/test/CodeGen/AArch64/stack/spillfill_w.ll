@@ -69,9 +69,7 @@ define void @spillfillsve(<vscale x 2 x i64> %v0, <mscale x 16 x i32> %v1) {
 ; CHECK-DAG: addvl   sp, sp, #-1
 ; CHECK-DAG: st1d    { z0.d }, p0, [sp]
 ; CHECK-DAG: ld1d    { z0.d }, p0/z, [sp]
-; CHECK-DAG: mov     x8, sp
 ; CHECK-DAG: st1w    { za0h.s[w12] }, p0, [x8, x8, lsl #2]
-; CHECK-DAG: mov     x8, sp
 ; CHECK-DAG: ld1w    { za0h.s[w12] }, p0/z, [x8, x8, lsl #2]
 ; CHECK-DAG: addvl   sp, sp, #1
 ; CHECK-DAG: addvl   sp, sp, #1

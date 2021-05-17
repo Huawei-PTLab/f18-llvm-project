@@ -4228,7 +4228,7 @@ void llvm::emitSMEFrameOffset(MachineBasicBlock &MBB,
                               int64_t size, MachineInstr::MIFlag Flag,
                               bool SetNZCV) {
   int64_t Bytes, NumMatrices;
-  unsigned Opc;
+  unsigned ScalableOpc, FixedOpc;
 
   // If method is called for eliminating frameindex then insert SME_FI
   // based on the type of spill/fill instruction.
@@ -4242,36 +4242,36 @@ void llvm::emitSMEFrameOffset(MachineBasicBlock &MBB,
     case AArch64::LD1V_ZaXI_B:
     case AArch64::ST1H_ZaXI_B:
     case AArch64::ST1V_ZaXI_B:
-      Opc = AArch64::SME_FI_B;
+      ScalableOpc = AArch64::SME_FI_B;
       break;
     case AArch64::LD1H_ZaXI_H:
     case AArch64::LD1V_ZaXI_H:
     case AArch64::ST1H_ZaXI_H:
     case AArch64::ST1V_ZaXI_H:
-      Opc = AArch64::SME_FI_H;
+      ScalableOpc = AArch64::SME_FI_H;
       break;
     case AArch64::LD1H_ZaXI_W:
     case AArch64::LD1V_ZaXI_W:
     case AArch64::ST1H_ZaXI_W:
     case AArch64::ST1V_ZaXI_W:
-      Opc = AArch64::SME_FI_W;
+      ScalableOpc = AArch64::SME_FI_W;
       break;
     case AArch64::LD1H_ZaXI_D:
     case AArch64::LD1V_ZaXI_D:
     case AArch64::ST1H_ZaXI_D:
     case AArch64::ST1V_ZaXI_D:
-      Opc = AArch64::SME_FI_D;
+      ScalableOpc = AArch64::SME_FI_D;
       break;
     }
   } else {
     if (size == 32)
-      Opc = AArch64::SME_ADDVL_D;
+      ScalableOpc = AArch64::SME_ADDVL_D;
     if (size == 64)
-      Opc = AArch64::SME_ADDVL_W;
+      ScalableOpc = AArch64::SME_ADDVL_W;
     if (size == 128)
-      Opc = AArch64::SME_ADDVL_H;
+      ScalableOpc = AArch64::SME_ADDVL_H;
     if (size == 256)
-      Opc = AArch64::SME_ADDVL_B;
+      ScalableOpc = AArch64::SME_ADDVL_B;
   }
 
   // Compute the number of matrices based on the size of the SME tile.
@@ -4281,19 +4281,19 @@ void llvm::emitSMEFrameOffset(MachineBasicBlock &MBB,
   if (Bytes || (!Offset && SrcReg != DestReg)) {
     assert((DestReg != AArch64::SP || Bytes % 8 == 0) &&
            "SP increment/decrement not 8-byte aligned");
-    Opc = SetNZCV ? AArch64::ADDSXri : AArch64::ADDXri;
+    FixedOpc = SetNZCV ? AArch64::ADDSXri : AArch64::ADDXri;
     if (Bytes < 0) {
       Bytes = -Bytes;
-      Opc = SetNZCV ? AArch64::SUBSXri : AArch64::SUBXri;
+      FixedOpc = SetNZCV ? AArch64::SUBSXri : AArch64::SUBXri;
     }
-    emitSMEFrameOffsetAdj(MBB, MBBI, DL, DestReg, SrcReg, Bytes, Opc, TII,
+    emitSMEFrameOffsetAdj(MBB, MBBI, DL, DestReg, SrcReg, Bytes, FixedOpc, TII,
                           Flag);
     SrcReg = DestReg;
   }
 
   if (NumMatrices) {
-    emitSMEFrameOffsetAdj(MBB, MBBI, DL, DestReg, SrcReg, NumMatrices, Opc, TII,
-                          Flag);
+    emitSMEFrameOffsetAdj(MBB, MBBI, DL, DestReg, SrcReg, NumMatrices,
+                          ScalableOpc, TII, Flag);
     SrcReg = DestReg;
   }
 }

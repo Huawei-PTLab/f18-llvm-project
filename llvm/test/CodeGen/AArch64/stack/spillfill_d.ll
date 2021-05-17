@@ -31,7 +31,7 @@ define void @fillsve(<vscale x 2 x i64> %v0, <mscale x 4 x i64> %v1) {
 ; CHECK-DAG: addvl   sp, sp, #-1
 ; CHECK-DAG: st1d    { z0.d }, p0, [sp]
 ; CHECK-DAG: ld1d    { z0.d }, p0/z, [sp]
-; CHECK-DAG: mov     x8, sp
+; CHECK-DAG: st1d    { za0h.d[w12] }, p0, [x8, x8, lsl #3]
 ; CHECK-DAG: ld1d    { za0h.d[w12] }, p0/z, [x8, x8, lsl #3]
 ; CHECK-DAG: addvl   sp, sp, #1
 ; CHECK-DAG: addvl   sp, sp, #1
@@ -41,6 +41,7 @@ define void @fillsve(<vscale x 2 x i64> %v0, <mscale x 4 x i64> %v1) {
 
    store volatile <vscale x 2 x i64> %v0, <vscale x 2 x i64>* %local0
    load volatile <vscale x 2 x i64>, <vscale x 2 x i64>* %local0
+   store volatile <mscale x 4 x i64> %v1, <mscale x 4 x i64>* %local1
    load volatile <mscale x 4 x i64>, <mscale x 4 x i64>* %local1
    ret void
 }
