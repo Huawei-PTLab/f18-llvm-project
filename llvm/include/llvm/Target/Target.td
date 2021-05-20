@@ -186,6 +186,9 @@ class Register<string n, list<string> altNames = []> {
   bits<16> HWEncoding = 0;
 
   bit isArtificial = false;
+
+  // noNormalize - When true, skip the normalization of register weights.
+  bit noNormalize = false;
 }
 
 // RegisterWithSubRegs - This can be used to define instances of Register which

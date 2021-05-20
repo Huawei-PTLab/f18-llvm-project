@@ -155,6 +155,7 @@ namespace llvm {
     bool CoveredBySubRegs;
     bool HasDisjunctSubRegs;
     bool Artificial;
+    bool SkipNormalize;
 
     // Map SubRegIndex -> Register.
     typedef std::map<CodeGenSubRegIndex *, CodeGenRegister *,
@@ -340,6 +341,8 @@ namespace llvm {
     bool CoveredBySubRegs;
     /// A register class is artificial if all its members are artificial.
     bool Artificial;
+    /// Skip normalizing the weights of registers.
+    bool SkipNormalize;
     /// Generate register pressure set for this register class and any class
     /// synthesized from it.
     bool GeneratePressureSet;

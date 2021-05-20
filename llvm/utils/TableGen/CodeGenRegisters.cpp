@@ -160,6 +160,7 @@ CodeGenRegister::CodeGenRegister(Record *R, unsigned Enum)
       HasDisjunctSubRegs(false), SubRegsComplete(false),
       SuperRegsComplete(false), TopoSig(~0u) {
   Artificial = R->getValueAsBit("isArtificial");
+  SkipNormalize = R->getValueAsBit("noNormalize");
 }
 
 void CodeGenRegister::buildObjectGraph(CodeGenRegBank &RegBank) {
@@ -1796,10 +1797,12 @@ void CodeGenRegBank::computeRegUnitWeights() {
     assert(NumIters <= NumNativeRegUnits && "Runaway register unit weights");
     Changed = false;
     for (auto &Reg : Registers) {
-      CodeGenRegister::RegUnitList NormalUnits;
-      BitVector NormalRegs;
-      Changed |= normalizeWeight(&Reg, UberSets, RegSets, NormalRegs,
-                                 NormalUnits, *this);
+      if (!Reg.SkipNormalize) {
+        CodeGenRegister::RegUnitList NormalUnits;
+        BitVector NormalRegs;
+        Changed |= normalizeWeight(&Reg, UberSets, RegSets, NormalRegs,
+                                   NormalUnits, *this);
+      }
     }
   }
 }

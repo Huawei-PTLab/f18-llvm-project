@@ -1179,7 +1179,7 @@ def ZAQ13 : AArch64Reg<13, "za13.q">;
 def ZAQ14 : AArch64Reg<14, "za14.q">;
 def ZAQ15 : AArch64Reg<15, "za15.q">;
 
-let SubRegIndices = [zasubq0, zasubq1] in {
+let SubRegIndices = [zasubq0, zasubq1], noNormalize = 1 in {
   def ZAD0 : AArch64Reg<0, "za0.d", [ZAQ0, ZAQ8]>;
   def ZAD1 : AArch64Reg<1, "za1.d", [ZAQ1, ZAQ9]>;
   def ZAD2 : AArch64Reg<2, "za2.d", [ZAQ2, ZAQ10]>;
@@ -1190,19 +1190,19 @@ let SubRegIndices = [zasubq0, zasubq1] in {
   def ZAD7 : AArch64Reg<7, "za7.d", [ZAQ7, ZAQ15]>;
 }
 
-let SubRegIndices = [zasubd0, zasubd1] in {
+let SubRegIndices = [zasubd0, zasubd1], noNormalize = 1 in {
   def ZAS0 : AArch64Reg<0, "za0.s", [ZAD0, ZAD4]>;
   def ZAS1 : AArch64Reg<1, "za1.s", [ZAD1, ZAD5]>;
   def ZAS2 : AArch64Reg<2, "za2.s", [ZAD2, ZAD6]>;
   def ZAS3 : AArch64Reg<3, "za3.s", [ZAD3, ZAD7]>;
 }
 
-let SubRegIndices = [zasubs0, zasubs1] in {
+let SubRegIndices = [zasubs0, zasubs1], noNormalize = 1 in {
   def ZAH0 : AArch64Reg<0, "za0.h", [ZAS0, ZAS2]>;
   def ZAH1 : AArch64Reg<1, "za1.h", [ZAS1, ZAS3]>;
 }
 
-let SubRegIndices = [zasubh0, zasubh1] in {
+let SubRegIndices = [zasubh0, zasubh1], noNormalize = 1 in {
   def ZAB0 : AArch64Reg<0, "za0.b", [ZAH0, ZAH1]>;
 }
 
