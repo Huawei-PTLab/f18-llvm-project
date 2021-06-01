@@ -561,6 +561,21 @@ multiclass SMEPseudoFrameIndex{
 
 defm SME_FI : SMEPseudoFrameIndex;
 
+// Pseudo instruction for sme tile copy.
+multiclass SMEPseudoTileCopy<MatrixTileVectorOperand zar8ty, MatrixTileVectorOperand zar16ty, MatrixTileVectorOperand zar32ty,
+                             MatrixTileVectorOperand zar64ty> {
+  def _B : Pseudo<(outs zar8ty:$Za), (ins zar8ty:$ZaCopy, ZPR8:$Zn, PPR:$Pv,
+                   MatrixIndexGPR32Op12_15:$Wv), []>, Sched<[]>;
+  def _H : Pseudo<(outs zar16ty:$Za), (ins zar16ty:$ZaCopy, ZPR16:$Zn, PPR:$Pv,
+                   MatrixIndexGPR32Op12_15:$Wv), []>, Sched<[]>;
+  def _W : Pseudo<(outs zar32ty:$Za), (ins zar32ty:$ZaCopy, ZPR32:$Zn, PPR:$Pv,
+                   MatrixIndexGPR32Op12_15:$Wv), []>, Sched<[]>;
+  def _D : Pseudo<(outs zar64ty:$Za), (ins zar64ty:$ZaCopy, ZPR64:$Zn, PPR:$Pv,
+                   MatrixIndexGPR32Op12_15:$Wv), []>, Sched<[]>;
+}
+
+defm SMECOPY : SMEPseudoTileCopy<TileVectorOpH8, TileVectorOpH16, TileVectorOpH32, TileVectorOpH64>;
+
 //===----------------------------------------------------------------------===//
 // Move instructions
 //===----------------------------------------------------------------------===//

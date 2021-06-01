@@ -3635,6 +3635,48 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     CurDAG->SelectNodeTo(Node, AArch64::ADDXri, MVT::i64, Ops);
     return;
   }
+
+  case ISD::CopyFromReg: {
+    EVT VT1 = Node->getOperand(0).getValueType();
+    EVT VT2 = Node->getOperand(1).getValueType();
+    SDValue Chain = Node->getOperand(0);
+    const EVT ResTys[] = {VT2, VT1};
+
+    if (VT2.isScalableMatrix()) {
+      unsigned Op;
+      if (VT2 == MVT::mxv256i8)
+        Op = AArch64::SMECOPY_B;
+      else if (VT2 == MVT::mxv64i16)
+        Op = AArch64::SMECOPY_H;
+      else if (VT2 == MVT::mxv16i32)
+        Op = AArch64::SMECOPY_W;
+      else if (VT2 == MVT::mxv4i64)
+        Op = AArch64::SMECOPY_D;
+      else
+        return;
+
+      SDLoc DL(Node);
+      SDValue SourceTile = Node->getOperand(1);
+      unsigned numRowColElems =
+          static_cast<unsigned>(std::sqrt(VT2.getVectorNumElements()));
+      MVT ElemTy = VT2.getMatrixElementType().getSimpleVT();
+      MVT VecTy = MVT::getScalableVectorVT(ElemTy, numRowColElems);
+      MVT PredTy = MVT::getScalableVectorVT(MVT::i1, numRowColElems);
+      SDValue Vector = SDValue(
+          CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, VecTy), 0);
+      SDValue PredicateReg = SDValue(
+          CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, PredTy), 0);
+      SDValue WvSelect = SDValue(
+          CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, MVT::i32), 0);
+
+      SDValue Ops[] = {SourceTile, Vector, PredicateReg, WvSelect, Chain};
+
+      SDNode *Copy = CurDAG->getMachineNode(Op, DL, ResTys, Ops);
+      ReplaceNode(Node, Copy);
+      return;
+    }
+    break;
+  }
   case ISD::INTRINSIC_W_CHAIN: {
     unsigned IntNo = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
     switch (IntNo) {

@@ -331,8 +331,8 @@ namespace llvm {
 
     /// Given a vector type, return the number of elements it contains.
     unsigned getVectorNumElements() const {
-      assert(isVector() && "Invalid vector type!");
 
+      assert((isVector() || isScalableMatrix()) && "Invalid vector type!");
       if (isScalableVector())
         llvm::reportInvalidSizeRequest(
             "Possible incorrect use of EVT::getVectorNumElements() for "

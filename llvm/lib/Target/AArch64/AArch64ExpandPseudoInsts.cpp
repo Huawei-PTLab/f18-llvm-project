@@ -45,6 +45,8 @@
 
 using namespace llvm;
 
+#define DEBUG_TYPE "pseudo-expand"
+
 #define AARCH64_EXPAND_PSEUDO_NAME "AArch64 pseudo instruction expansion pass"
 
 namespace {
@@ -98,6 +100,8 @@ private:
                       unsigned CntOpc, unsigned AllocaOpc);
   bool expandSMEFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                    unsigned Opc, unsigned FIOpc);
+  bool expandSMECOPY(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                     MachineBasicBlock::iterator &NextMBBI, unsigned Opc);
 };
 
 } // end anonymous namespace
@@ -947,6 +951,82 @@ bool AArch64ExpandPseudo::expandSMEFI(MachineBasicBlock &MBB,
   return true;
 }
 
+// Expand SMECOPY instruction for SME tile copy.
+bool AArch64ExpandPseudo::expandSMECOPY(MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator MBBI,
+                                        MachineBasicBlock::iterator &NextMBBI,
+                                        unsigned Opc) {
+  // The instruction is of the form:
+  // za0d, ch= SMECOPY $za1d, $z1, $p0, $x12
+  // The sequence of instructions to be generated is.
+  //     cnt(type) Wv
+  // L1:
+  //     mov Zd, pg/m, Za0h.d[Wv, imm]
+  //     mov za1h.d[Wv, imm], pg/m, Zd
+  //     cbz Wv, L1
+  MachineInstr &MI = *MBBI;
+  MachineFunction *MF = MBB.getParent();
+
+  // If src and dest reg are same then it is identity copy and
+  // not a SME reg-reg-copy. So delete the COPY and pass.
+  if (MI.getOperand(0).getReg() == MI.getOperand(1).getReg()) {
+    LLVM_DEBUG(dbgs() << "Identing SME copy:\nRemoving:" << MI);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  auto TRI = MBB.getParent()->getSubtarget().getRegisterInfo();
+  unsigned Reg64 = TRI->getMatchingSuperReg(
+      MI.getOperand(4).getReg(), AArch64::sub_32, &AArch64::GPR64RegClass);
+
+  auto LoopBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+  auto DoneBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+
+  BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc))
+      .addReg(Reg64, RegState::Define)
+      .addImm(31)
+      .addImm(1);
+
+  MF->insert(++MBB.getIterator(), LoopBB);
+  MF->insert(++LoopBB->getIterator(), DoneBB);
+
+  BuildMI(LoopBB, MI.getDebugLoc(), TII->get(AArch64::EXTRACT_ZPMXI_H_D))
+      .addReg(MI.getOperand(2).getReg(), RegState::Define) // Za vector
+      .addReg(MI.getOperand(3).getReg())                   // Pg
+      .addReg(MI.getOperand(1).getReg())                   // Tile1
+      .addReg(MI.getOperand(4).getReg())                   // Wv
+      .addImm(0);                                          // Imm
+
+  BuildMI(LoopBB, MI.getDebugLoc(), TII->get(AArch64::INSERT_MXIPZ_H_D))
+      .addReg(MI.getOperand(0).getReg(), RegState::Define) // Tile0
+      .addReg(MI.getOperand(0).getReg())                   // Tile0
+      .addReg(MI.getOperand(4).getReg())                   // Wv
+      .addImm(0)                                           // Imm
+      .addReg(MI.getOperand(3).getReg())                   // Pv
+      .addReg(MI.getOperand(2).getReg());                  // Za vector
+
+  BuildMI(LoopBB, MI.getDebugLoc(), TII->get(AArch64::SUBXri))
+      .addReg(Reg64, RegState::Define)
+      .addReg(Reg64)
+      .addImm(1)
+      .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
+
+  BuildMI(LoopBB, MI.getDebugLoc(), TII->get(AArch64::CBZX))
+      .addUse(Reg64)
+      .addMBB(LoopBB);
+
+  LoopBB->addSuccessor(LoopBB);
+  LoopBB->addSuccessor(DoneBB);
+
+  DoneBB->splice(DoneBB->end(), &MBB, MI, MBB.end());
+  DoneBB->transferSuccessors(&MBB);
+
+  MBB.addSuccessor(LoopBB);
+  NextMBBI = MBB.end();
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AArch64ExpandPseudo::expandSMESpillFill(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     MachineBasicBlock::iterator &NextMBBI, unsigned Opc, unsigned PtrueOpc,
@@ -1616,6 +1696,14 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
    case AArch64::SME_FI_Q:
      return expandSMEFI(MBB, MBBI, AArch64::CNTD_XPiI,
                         AArch64::SME_FI_Q);
+   case AArch64::SMECOPY_B:
+     return expandSMECOPY(MBB, MBBI, NextMBBI, AArch64::CNTB_XPiI);
+   case AArch64::SMECOPY_H:
+     return expandSMECOPY(MBB, MBBI, NextMBBI, AArch64::CNTH_XPiI);
+   case AArch64::SMECOPY_W:
+     return expandSMECOPY(MBB, MBBI, NextMBBI, AArch64::CNTW_XPiI);
+   case AArch64::SMECOPY_D:
+     return expandSMECOPY(MBB, MBBI, NextMBBI, AArch64::CNTD_XPiI);
   }
   return false;
 }
