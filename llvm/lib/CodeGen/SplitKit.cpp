@@ -524,12 +524,30 @@ SlotIndex SplitEditor::buildSingleSubRegCopy(Register FromReg, Register ToReg,
 SlotIndex SplitEditor::buildCopy(Register FromReg, Register ToReg,
     LaneBitmask LaneMask, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator InsertBefore, bool Late, unsigned RegIdx) {
+
   const MCInstrDesc &Desc = TII.get(TargetOpcode::COPY);
   SlotIndexes &Indexes = *LIS.getSlotIndexes();
+  MachineInstr *CopyMI;
   if (LaneMask.all() || LaneMask == MRI.getMaxLaneMaskForVReg(FromReg)) {
-    // The full vreg is copied.
-    MachineInstr *CopyMI =
-        BuildMI(MBB, InsertBefore, DebugLoc(), Desc, ToReg).addReg(FromReg);
+    // insert SMECOPY
+    assert(MRI.getRegClass(FromReg) == MRI.getRegClass(ToReg) &&
+           "Should have same reg class");
+    if (TRI.isSMERegisters(MRI.getRegClass(FromReg))) {
+      Register ZaReg = Edit->createFrom(TRI.getVector());
+      Register Pred = Edit->createFrom(TRI.getPredicate());
+      Register Selector = Edit->createFrom(TRI.getSelector());
+      CopyMI = BuildMI(MBB, InsertBefore, DebugLoc(),
+                       TII.get(TII.getSMECopyInstr(MRI, FromReg)))
+                   .addReg(ToReg, RegState::Define)
+                   .addReg(FromReg)
+                   .addReg(ZaReg)
+                   .addReg(Pred)
+                   .addReg(Selector);
+      // create additional registers and add it to the SME Copy
+    } else { // The full vreg is copied.
+      CopyMI =
+          BuildMI(MBB, InsertBefore, DebugLoc(), Desc, ToReg).addReg(FromReg);
+    }
     return Indexes.insertMachineInstrInMaps(*CopyMI, Late).getRegSlot();
   }
 

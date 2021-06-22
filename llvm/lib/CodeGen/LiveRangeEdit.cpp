@@ -16,6 +16,7 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -49,6 +50,15 @@ LiveInterval &LiveRangeEdit::createEmptyIntervalFrom(Register OldReg,
       LI.createSubRange(Alloc, S.LaneMask);
   }
   return LI;
+}
+
+// This methods create a register from the register class given.
+Register LiveRangeEdit::createFrom(const TargetRegisterClass *RC) {
+  Register VReg = MRI.createVirtualRegister(RC);
+  // We are going to have the interval same as that of the parent.
+  if (Parent && !Parent->isSpillable())
+    LIS.getInterval(VReg).markNotSpillable();
+  return VReg;
 }
 
 Register LiveRangeEdit::createFrom(Register OldReg) {

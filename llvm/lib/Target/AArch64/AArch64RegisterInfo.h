@@ -91,6 +91,10 @@ public:
   const uint32_t *getWindowsStackProbePreservedMask() const;
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
+  bool isSMERegisters(const TargetRegisterClass *RC) const override;
+  const TargetRegisterClass *getVector() const override;
+  const TargetRegisterClass *getPredicate() const override;
+  const TargetRegisterClass *getSelector() const override;
   bool isAsmClobberable(const MachineFunction &MF,
                        MCRegister PhysReg) const override;
   bool isConstantPhysReg(MCRegister PhysReg) const override;

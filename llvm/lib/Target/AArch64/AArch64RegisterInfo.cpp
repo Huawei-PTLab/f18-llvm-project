@@ -344,6 +344,25 @@ bool AArch64RegisterInfo::isReservedReg(const MachineFunction &MF,
   return getReservedRegs(MF)[Reg];
 }
 
+bool AArch64RegisterInfo::isSMERegisters(const TargetRegisterClass *RC) const {
+  if (RC == &AArch64::MPR64RegClass || RC == &AArch64::MPR32RegClass ||
+      RC == &AArch64::MPR16RegClass || RC == &AArch64::MPR8RegClass)
+    return true;
+  return false;
+}
+
+const TargetRegisterClass *AArch64RegisterInfo::getVector() const {
+  return &AArch64::ZPRRegClass;
+}
+
+const TargetRegisterClass *AArch64RegisterInfo::getPredicate() const {
+  return &AArch64::PPRRegClass;
+}
+
+const TargetRegisterClass *AArch64RegisterInfo::getSelector() const {
+  return &AArch64::MatrixIndexGPR32_12_15RegClass;
+}
+
 bool AArch64RegisterInfo::isAnyArgRegReserved(const MachineFunction &MF) const {
   return llvm::any_of(*AArch64::GPR64argRegClass.MC, [this, &MF](MCPhysReg r) {
     return isReservedReg(MF, r);

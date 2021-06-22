@@ -537,6 +537,17 @@ public:
     return true;
   }
 
+  // Check if the register class is a SME register class, then return true.
+  virtual bool isSMERegisters(const TargetRegisterClass *RC) const {
+    return false;
+  }
+
+  /// These 3 methods are to return the register class of the vector, predicate
+  /// and selector registers for SMECOPY instruction from AArch64.
+  virtual const TargetRegisterClass *getVector() const { return nullptr; }
+  virtual const TargetRegisterClass *getPredicate() const { return nullptr; }
+  virtual const TargetRegisterClass *getSelector() const { return nullptr; }
+
   /// Returns true if PhysReg cannot be written to in inline asm statements.
   virtual bool isInlineAsmReadOnlyReg(const MachineFunction &MF,
                                       unsigned PhysReg) const {

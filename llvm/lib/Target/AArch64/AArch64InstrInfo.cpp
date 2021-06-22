@@ -7868,6 +7868,22 @@ AArch64InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   return None;
 }
 
+unsigned AArch64InstrInfo::getSMECopyInstr(const MachineRegisterInfo &MRI,
+                                           unsigned Vreg) const {
+
+  const TargetRegisterClass *RC = MRI.getRegClass(Vreg);
+  if (RC == &AArch64::MPR64RegClass)
+    return AArch64::SMECOPY_D;
+  else if (RC == &AArch64::MPR32RegClass)
+    return AArch64::SMECOPY_W;
+  else if (RC == &AArch64::MPR16RegClass)
+    return AArch64::SMECOPY_H;
+  else if (RC == &AArch64::MPR8RegClass)
+    return AArch64::SMECOPY_B;
+  else
+    return 0;
+}
+
 Optional<RegImmPair> AArch64InstrInfo::isAddImmediate(const MachineInstr &MI,
                                                       Register Reg) const {
   int Sign = 1;

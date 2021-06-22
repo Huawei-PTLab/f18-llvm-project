@@ -172,6 +172,10 @@ public:
     return makeArrayRef(NewRegs).slice(FirstNew);
   }
 
+  /// createFrom(RegisterClass) - Create a new virtual register based on the
+  /// RegisterClass provided.
+  Register createFrom(const TargetRegisterClass *RC);
+
   /// createFrom - Create a new virtual register based on OldReg.
   Register createFrom(Register OldReg);
 

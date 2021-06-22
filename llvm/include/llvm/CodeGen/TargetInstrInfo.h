@@ -1014,6 +1014,12 @@ public:
     return isCopyInstrImpl(MI);
   }
 
+  // This method return true if the copy instruction is from a SMETile.
+  virtual unsigned getSMECopyInstr(const MachineRegisterInfo &MRI,
+                                   unsigned Vreg) const {
+    return 0;
+  }
+
   /// If the specific machine instruction is an instruction that adds an
   /// immediate value and a physical register, and stores the result in
   /// the given physical register \c Reg, return a pair of the source
