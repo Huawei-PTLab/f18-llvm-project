@@ -45,13 +45,11 @@ SME_VECTOR_TYPE("__SMInt8_t", "__SMInt8_t", SmeInt8, SmeInt8Ty, 256, 8, true, fa
 SME_VECTOR_TYPE("__SMInt16_t", "__SMInt16_t", SmeInt16, SmeInt16Ty, 64, 16, true, false, false)
 SME_VECTOR_TYPE("__SMInt32_t", "__SMInt32_t", SmeInt32, SmeInt32Ty, 16, 32, true, false, false)
 SME_VECTOR_TYPE("__SMInt64_t", "__SMInt64_t", SmeInt64, SmeInt64Ty, 4, 64, true, false, false)
-SME_VECTOR_TYPE("__SMInt128_t", "__SMInt128_t", SmeInt128, SmeInt128Ty, 1, 128, true, false, false)
 
 SME_VECTOR_TYPE("__SMUint8_t", "__SMUint8_t", SmeUint8, SmeUint8Ty, 256, 8, false, false, false)
 SME_VECTOR_TYPE("__SMUint16_t", "__SMUint16_t", SmeUint16, SmeUint16Ty, 64, 16, false, false, false)
 SME_VECTOR_TYPE("__SMUint32_t", "__SMUint32_t", SmeUint32, SmeUint32Ty, 16, 32, false, false, false)
 SME_VECTOR_TYPE("__SMUint64_t", "__SMUint64_t", SmeUint64, SmeUint64Ty, 4, 64, false, false, false)
-SME_VECTOR_TYPE("__SMUint128_t", "__SMUint128_t", SmeUint128, SmeUint128Ty, 1, 128, false, false, false)
 
 SME_VECTOR_TYPE("__SMFloat16_t", "__SMFloat16_t", SmeFloat16, SmeFloat16Ty, 64, 16, true, true, false)
 SME_VECTOR_TYPE("__SMFloat32_t", "__SMFloat32_t", SmeFloat32, SmeFloat32Ty, 16, 32, true, true, false)

@@ -152,8 +152,6 @@ def EltTyBool32  : EltType<10>;
 def EltTyBool64  : EltType<11>;
 def EltTyBFloat16 : EltType<12>;
 
-def EltTyInt128  : EltType<13>;
-
 class MemEltType<int val> {
   int Value = val;
 }

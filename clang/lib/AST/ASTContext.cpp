@@ -3906,10 +3906,6 @@ ASTContext::getBuiltinVectorTypeInfo(const BuiltinType *Ty) const {
     return SVE_INT_ELTTY(64, 4, true, 1);
   case BuiltinType::SmeUint64:
     return SVE_INT_ELTTY(64, 4, false, 1);
-  case BuiltinType::SmeInt128:
-    return SVE_INT_ELTTY(128, 1, true, 1);
-  case BuiltinType::SmeUint128:
-    return SVE_INT_ELTTY(128, 1, false, 1);
   case BuiltinType::SveBool:
     return SVE_ELTTY(BoolTy, 16, 1);
   case BuiltinType::SveFloat16:

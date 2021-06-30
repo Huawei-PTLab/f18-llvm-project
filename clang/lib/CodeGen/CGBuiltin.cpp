@@ -8613,8 +8613,6 @@ CodeGenFunction::getSMEType(const SVETypeFlags &TypeFlags) {
     return llvm::ScalableMatrixType::get(Builder.getInt32Ty(), 16);
   case SVETypeFlags::EltTyInt64:
     return llvm::ScalableMatrixType::get(Builder.getInt64Ty(), 4);
-  case SVETypeFlags::EltTyInt128:
-    return llvm::ScalableMatrixType::get(Builder.getInt128Ty(), 1);
 
   case SVETypeFlags::EltTyBFloat16:
     return llvm::ScalableMatrixType::get(Builder.getBFloatTy(), 64);

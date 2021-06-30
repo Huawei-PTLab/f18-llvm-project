@@ -1161,12 +1161,10 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "typedef __SMInt16_t smint16_t;\n";
   OS << "typedef __SMInt32_t smint32_t;\n";
   OS << "typedef __SMInt64_t smint64_t;\n";
-  OS << "typedef __SMInt128_t smint128_t;\n";
   OS << "typedef __SMUint8_t smuint8_t;\n";
   OS << "typedef __SMUint16_t smuint16_t;\n";
   OS << "typedef __SMUint32_t smuint32_t;\n";
   OS << "typedef __SMUint64_t smuint64_t;\n";
-  OS << "typedef __SMUint128_t smuint128_t;\n";
   OS << "typedef __SMBFloat16_t smbfloat16_t;\n";
   OS << "typedef __SMFloat16_t smfloat16_t;\n";
   OS << "typedef __SMFloat32_t smfloat32_t;\n";
