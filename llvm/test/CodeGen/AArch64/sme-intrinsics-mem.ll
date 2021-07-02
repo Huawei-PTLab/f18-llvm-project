@@ -70,6 +70,28 @@ declare <mscale x 16 x i32> @llvm.aarch64.sme.ld1.col.mxv16i32(<vscale x 4 x i1>
 declare void  @llvm.aarch64.sme.st1.row.mxv16i32(<vscale x 4 x i1>, <mscale x 16 x i32>, i32, i64, i32*)
 declare void  @llvm.aarch64.sme.st1.col.mxv16i32(<vscale x 4 x i1>, <mscale x 16 x i32>, i32, i64, i32*)
 
+define dso_local void @test_ld1_st1_f32(<vscale x 4 x i1> %pa, <vscale x 4 x i1> %pb, <mscale x 16 x float> %m, i32 %row, i32 %col, float* readonly %addr, i64 %off) nounwind {
+; CHECK-LABEL: test_ld1_st1_f32:
+; CHECK:       mov w[[R1:[0-9]+]], w0
+; CHECK-DAG:   mov w[[R2:[0-9]+]], w1
+; CHECK-DAG:   ld1w {za0h.s[w[[R1]], 0]}, p0/z, [x2]
+; CHECK:       ld1w {za0v.s[w[[R2]], 3]}, p1/z, [x2, x3, lsl #2]
+; CHECK:       st1w {za0h.s[w[[R1]], 0]}, p0, [x2]
+; CHECK:       st1w {za0v.s[w[[R2]], 3]}, p1, [x2, x3, lsl #2]
+; CHECK:       ret
+  %1 = getelementptr float, float* %addr, i64 %off ; verify reg+reg addressing mode
+  %2 = call <mscale x 16 x float> @llvm.aarch64.sme.ld1.row.mxv16f32(<vscale x 4 x i1> %pa, <mscale x 16 x float> %m, i32 %row, i64 0, float* %addr)
+  %3 = call <mscale x 16 x float> @llvm.aarch64.sme.ld1.col.mxv16f32(<vscale x 4 x i1> %pb, <mscale x 16 x float> %2, i32 %col, i64 3, float* %1)
+  call void @llvm.aarch64.sme.st1.row.mxv16f32(<vscale x 4 x i1> %pa, <mscale x 16 x float> %3, i32 %row, i64 0, float* %addr)
+  call void @llvm.aarch64.sme.st1.col.mxv16f32(<vscale x 4 x i1> %pb, <mscale x 16 x float> %3, i32 %col, i64 3, float* %1)
+  ret void
+}
+
+declare <mscale x 16 x float> @llvm.aarch64.sme.ld1.row.mxv16f32(<vscale x 4 x i1>, <mscale x 16 x float>, i32, i64, float*)
+declare <mscale x 16 x float> @llvm.aarch64.sme.ld1.col.mxv16f32(<vscale x 4 x i1>, <mscale x 16 x float>, i32, i64, float*)
+declare void  @llvm.aarch64.sme.st1.row.mxv16f32(<vscale x 4 x i1>, <mscale x 16 x float>, i32, i64, float*)
+declare void  @llvm.aarch64.sme.st1.col.mxv16f32(<vscale x 4 x i1>, <mscale x 16 x float>, i32, i64, float*)
+
 define dso_local void @test_ld1_st1_i64(<vscale x 2 x i1> %pa, <vscale x 2 x i1> %pb, <mscale x 4 x i64> %m, i32 %row, i32 %col, i64* readonly %addr, i64 %off) nounwind {
 ; CHECK-LABEL: test_ld1_st1_i64:
 ; CHECK:       mov w[[R1:[0-9]+]], w0
@@ -91,6 +113,28 @@ declare <mscale x 4 x i64> @llvm.aarch64.sme.ld1.row.mxv4i64(<vscale x 2 x i1>, 
 declare <mscale x 4 x i64> @llvm.aarch64.sme.ld1.col.mxv4i64(<vscale x 2 x i1>, <mscale x 4 x i64>, i32, i64, i64*)
 declare void  @llvm.aarch64.sme.st1.row.mxv4i64(<vscale x 2 x i1>, <mscale x 4 x i64>, i32, i64, i64*)
 declare void  @llvm.aarch64.sme.st1.col.mxv4i64(<vscale x 2 x i1>, <mscale x 4 x i64>, i32, i64, i64*)
+
+define dso_local void @test_ld1_st1_f64(<vscale x 2 x i1> %pa, <vscale x 2 x i1> %pb, <mscale x 4 x double> %m, i32 %row, i32 %col, double* readonly %addr, i64 %off) nounwind {
+; CHECK-LABEL: test_ld1_st1_f64:
+; CHECK:       mov w[[R1:[0-9]+]], w0
+; CHECK-DAG:   mov w[[R2:[0-9]+]], w1
+; CHECK-DAG:   ld1d {za0h.d[w[[R1]], 0]}, p0/z, [x2]
+; CHECK:       ld1d {za0v.d[w[[R2]], 1]}, p1/z, [x2, x3, lsl #3]
+; CHECK:       st1d {za0h.d[w[[R1]], 0]}, p0, [x2]
+; CHECK:       st1d {za0v.d[w[[R2]], 1]}, p1, [x2, x3, lsl #3]
+; CHECK:       ret
+  %1 = getelementptr double, double* %addr, i64 %off ; verify reg+reg addressing mode
+  %2 = call <mscale x 4 x double> @llvm.aarch64.sme.ld1.row.mxv4f64(<vscale x 2 x i1> %pa, <mscale x 4 x double> %m, i32 %row, i64 0, double* %addr)
+  %3 = call <mscale x 4 x double> @llvm.aarch64.sme.ld1.col.mxv4f64(<vscale x 2 x i1> %pb, <mscale x 4 x double> %2, i32 %col, i64 1, double* %1)
+  call void @llvm.aarch64.sme.st1.row.mxv4f64(<vscale x 2 x i1> %pa, <mscale x 4 x double> %3, i32 %row, i64 0, double* %addr)
+  call void @llvm.aarch64.sme.st1.col.mxv4f64(<vscale x 2 x i1> %pb, <mscale x 4 x double> %3, i32 %col, i64 1, double* %1)
+  ret void
+}
+
+declare <mscale x 4 x double> @llvm.aarch64.sme.ld1.row.mxv4f64(<vscale x 2 x i1>, <mscale x 4 x double>, i32, i64, double*)
+declare <mscale x 4 x double> @llvm.aarch64.sme.ld1.col.mxv4f64(<vscale x 2 x i1>, <mscale x 4 x double>, i32, i64, double*)
+declare void  @llvm.aarch64.sme.st1.row.mxv4f64(<vscale x 2 x i1>, <mscale x 4 x double>, i32, i64, double*)
+declare void  @llvm.aarch64.sme.st1.col.mxv4f64(<vscale x 2 x i1>, <mscale x 4 x double>, i32, i64, double*)
 
 define dso_local void @test_ld1_st1_i128(<vscale x 1 x i1> %pa, <vscale x 1 x i1> %pb, <mscale x 1 x i128> %m, i32 %row, i32 %col, i128* readonly %addr, i64 %off) nounwind {
 ; CHECK-LABEL: test_ld1_st1_i128:
