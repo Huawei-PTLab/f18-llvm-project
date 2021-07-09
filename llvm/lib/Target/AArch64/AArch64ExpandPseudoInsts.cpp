@@ -881,12 +881,12 @@ bool AArch64ExpandPseudo::expandSMEFI(MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator MBBI,
                                       unsigned Opc) {
   // The incoming frame index instruction will be like below.
-  // $x8, $x9 = SME_FI $sp
+  // $x8, $x9, $x10 = SME_FI $x8
   //
   // This will converted to the following sequence.
   // cnt(type) $x9
-  // cntb $x8
-  // madd $x8, $x8, $x9, $sp
+  // cntb $x10
+  // madd $x8, $x9, $x10, $x8
   MachineInstr &MI = *MBBI;
   unsigned Xn = MI.getOperand(0).getReg();
   unsigned Xm = MI.getOperand(1).getReg();

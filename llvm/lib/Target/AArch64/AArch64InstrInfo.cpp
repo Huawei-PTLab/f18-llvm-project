@@ -4193,17 +4193,20 @@ static void emitSMEFrameOffsetAdj(MachineBasicBlock &MBB,
     // Build instruction based on the Opc.
     auto MBI = BuildMI(MBB, MBBI, DL, TII->get(Opc), TmpReg);
 
-    // Create a scratch reg to be used for SME_FI and SME_ADDVL instructions.
-    Register SMETempReg = MBB.getParent()->getRegInfo().createVirtualRegister(
-        &AArch64::GPR64RegClass);
-
     if (Opc == AArch64::SME_FI_B || Opc == AArch64::SME_FI_H ||
         Opc == AArch64::SME_FI_W || Opc == AArch64::SME_FI_D) {
-      MBI = MBI.addReg(SMETempReg, RegState::Define);
+      MBI = MBI.addReg(MBB.getParent()->getRegInfo().createVirtualRegister(
+                           &AArch64::GPR64RegClass),
+                       RegState::Define);
+      MBI = MBI.addReg(MBB.getParent()->getRegInfo().createVirtualRegister(
+                           &AArch64::GPR64RegClass),
+                       RegState::Define);
       MBI = MBI.addReg(SrcReg);
     } else if (Opc == AArch64::SME_ADDVL_B || Opc == AArch64::SME_ADDVL_H ||
                Opc == AArch64::SME_ADDVL_W || Opc == AArch64::SME_ADDVL_D) {
-      MBI = MBI.addReg(SMETempReg, RegState::Define);
+      MBI = MBI.addReg(MBB.getParent()->getRegInfo().createVirtualRegister(
+                           &AArch64::GPR64RegClass),
+                       RegState::Define);
       MBI = MBI.addReg(SrcReg);
       MBI = MBI.addImm(Sign * (int)ThisVal);
     } else {

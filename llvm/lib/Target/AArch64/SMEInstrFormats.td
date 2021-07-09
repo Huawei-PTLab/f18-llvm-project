@@ -551,10 +551,10 @@ defm SME_ADDVL : PseudoAddVL;
 
 // Pseudo instruction for frame index.
 multiclass PseudoFrameIndex{
-  def _B : Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm), (ins GPR64sp:$Rn), []>, Sched<[]>;
-  def _H : Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm), (ins GPR64sp:$Rn), []>, Sched<[]>;
-  def _W : Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm), (ins GPR64sp:$Rn), []>, Sched<[]>;
-  def _D : Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm), (ins GPR64sp:$Rn), []>, Sched<[]>;
+  def _B : Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm, GPR64:$Rs), (ins GPR64sp:$Rn), []>, Sched<[]>;
+  def _H : Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm, GPR64:$Rs), (ins GPR64sp:$Rn), []>, Sched<[]>;
+  def _W : Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm, GPR64:$Rs), (ins GPR64sp:$Rn), []>, Sched<[]>;
+  def _D : Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm, GPR64:$Rs), (ins GPR64sp:$Rn), []>, Sched<[]>;
 }
 
 defm SME_FI : PseudoFrameIndex;
