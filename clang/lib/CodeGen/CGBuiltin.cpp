@@ -8695,10 +8695,13 @@ Value *CodeGenFunction::EmitSMEPredicateCast(Value *Pred,
     RTy = llvm::VectorType::get(IntegerType::get(getLLVMContext(), 1), 8, true);
     break;
   case 256:
+    IntID = Intrinsic::aarch64_sve_convert_to_svbool;
     RTy =
         llvm::VectorType::get(IntegerType::get(getLLVMContext(), 1), 16, true);
     break;
   }
+  if (Pred->getType() == RTy)
+    return Pred;
   Function *F = CGM.getIntrinsic(IntID, RTy);
   return Builder.CreateCall(F, Pred);
 }

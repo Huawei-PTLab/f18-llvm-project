@@ -17,18 +17,14 @@
 
 smint32_t test_smmopa_s32_s8_m(svbool_t Pn, svbool_t Pm, smint32_t Za, svint8_t Zn, svint8_t Zm) {
   // CHECK-LABEL: test_smmopa_s32_s8_m
-  // CHECK: %[[PN:.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv16i1(<vscale x 16 x i1> %Pn)
-  // CHECK: %[[PM:.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv16i1(<vscale x 16 x i1> %Pm)
-  // CHECK: %[[INTRINSIC:.*]] = call <mscale x 16 x i32> @llvm.aarch64.sme.smopa.mxv16i32.nxv16i8(<vscale x 16 x i1> %[[PN]], <vscale x 16 x i1> %[[PM]], <mscale x 16 x i32> %Za, <vscale x 16 x i8> %Zn, <vscale x 16 x i8> %Zm)
+  // CHECK: %[[INTRINSIC:.*]] = call <mscale x 16 x i32> @llvm.aarch64.sme.smopa.mxv16i32.nxv16i8(<vscale x 16 x i1> %Pn, <vscale x 16 x i1> %Pm, <mscale x 16 x i32> %Za, <vscale x 16 x i8> %Zn, <vscale x 16 x i8> %Zm)
   // CHECK: ret <mscale x 16 x i32> %[[INTRINSIC]]
   return SME_ACLE_FUNC(smmopa, _s32_s8, _m,)(Pn, Pm, Za, Zn, Zm);
 }
 
 smuint32_t test_smmopa_u32_u8_m(svbool_t Pn, svbool_t Pm, smuint32_t Za, svuint8_t Zn, svuint8_t Zm) {
   // CHECK-LABEL: test_smmopa_u32_u8_m
-  // CHECK: %[[PN:.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv16i1(<vscale x 16 x i1> %Pn)
-  // CHECK: %[[PM:.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv16i1(<vscale x 16 x i1> %Pm)
-  // CHECK: %[[INTRINSIC:.*]] = call <mscale x 16 x i32> @llvm.aarch64.sme.smopa.mxv16i32.nxv16i8(<vscale x 16 x i1> %[[PN]], <vscale x 16 x i1> %[[PM]], <mscale x 16 x i32> %Za, <vscale x 16 x i8> %Zn, <vscale x 16 x i8> %Zm)
+  // CHECK: %[[INTRINSIC:.*]] = call <mscale x 16 x i32> @llvm.aarch64.sme.smopa.mxv16i32.nxv16i8(<vscale x 16 x i1> %Pn, <vscale x 16 x i1> %Pm, <mscale x 16 x i32> %Za, <vscale x 16 x i8> %Zn, <vscale x 16 x i8> %Zm)
   // CHECK: ret <mscale x 16 x i32> %[[INTRINSIC]]
   return SME_ACLE_FUNC(smmopa, _u32_u8, _m,)(Pn, Pm, Za, Zn, Zm);
 }
@@ -57,18 +53,14 @@ smuint64_t test_smmopa_u64_u16_m(svbool_t Pn, svbool_t Pm, smuint64_t Za, svuint
 
 smint32_t test_smmopa_s32_s8_u8_m(svbool_t Pn, svbool_t Pm, smint32_t Za, svint8_t Zn, svuint8_t Zm) {
   // CHECK-LABEL: test_smmopa_s32_s8_u8_m
-  // CHECK: %[[PN:.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv16i1(<vscale x 16 x i1> %Pn)
-  // CHECK: %[[PM:.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv16i1(<vscale x 16 x i1> %Pm)
-  // CHECK: %[[INTRINSIC:.*]] = call <mscale x 16 x i32> @llvm.aarch64.sme.sumopa.mxv16i32.nxv16i8(<vscale x 16 x i1> %[[PN]], <vscale x 16 x i1> %[[PM]], <mscale x 16 x i32> %Za, <vscale x 16 x i8> %Zn, <vscale x 16 x i8> %Zm)
+  // CHECK: %[[INTRINSIC:.*]] = call <mscale x 16 x i32> @llvm.aarch64.sme.sumopa.mxv16i32.nxv16i8(<vscale x 16 x i1> %Pn, <vscale x 16 x i1> %Pm, <mscale x 16 x i32> %Za, <vscale x 16 x i8> %Zn, <vscale x 16 x i8> %Zm)
   // CHECK: ret <mscale x 16 x i32> %[[INTRINSIC]]
   return SME_ACLE_FUNC(smmopa, _s32_s8_u8, _m,)(Pn, Pm, Za, Zn, Zm);
 }
 
 smint32_t test_smmopa_s32_u8_s8_m(svbool_t Pn, svbool_t Pm, smint32_t Za, svuint8_t Zn, svint8_t Zm) {
   // CHECK-LABEL: test_smmopa_s32_u8_s8_m
-  // CHECK: %[[PN:.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv16i1(<vscale x 16 x i1> %Pn)
-  // CHECK: %[[PM:.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv16i1(<vscale x 16 x i1> %Pm)
-  // CHECK: %[[INTRINSIC:.*]] = call <mscale x 16 x i32> @llvm.aarch64.sme.usmopa.mxv16i32.nxv16i8(<vscale x 16 x i1> %[[PN]], <vscale x 16 x i1> %[[PM]], <mscale x 16 x i32> %Za, <vscale x 16 x i8> %Zn, <vscale x 16 x i8> %Zm)
+  // CHECK: %[[INTRINSIC:.*]] = call <mscale x 16 x i32> @llvm.aarch64.sme.usmopa.mxv16i32.nxv16i8(<vscale x 16 x i1> %Pn, <vscale x 16 x i1> %Pm, <mscale x 16 x i32> %Za, <vscale x 16 x i8> %Zn, <vscale x 16 x i8> %Zm)
   // CHECK: ret <mscale x 16 x i32> %[[INTRINSIC]]
   return SME_ACLE_FUNC(smmopa, _s32_u8_s8, _m,)(Pn, Pm, Za, Zn, Zm);
 }
