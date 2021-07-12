@@ -82,6 +82,14 @@ smfloat16_t test_sminserth_f16_m(svbool_t pg, smfloat16_t dest, uint32_t idx, sv
   return SME_ACLE_FUNC(sminserth,_f16,_m,)(pg, dest, idx, src);
 }
 
+smbfloat16_t test_sminserth_bf16_m(svbool_t pg, smbfloat16_t dest, uint32_t idx, svbfloat16_t src) {
+  // CHECK-LABEL: test_sminserth_bf16_m
+  // CHECK: %[[PG:.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %pg)
+  // CHECK: %[[INTRINSIC:.*]] = call <mscale x 64 x bfloat> @llvm.aarch64.sme.mova.row.mxv64bf16.nxv8bf16(<vscale x 8 x i1> %[[PG]], <mscale x 64 x bfloat> %dest, i32 %idx, i64 0, <vscale x 8 x bfloat> %src)
+  // CHECK: ret <mscale x 64 x bfloat> %[[INTRINSIC]]
+  return SME_ACLE_FUNC(sminserth,_bf16,_m,)(pg, dest, idx, src);
+}
+
 smfloat32_t test_sminserth_f32_m(svbool_t pg, smfloat32_t dest, uint32_t idx, svfloat32_t src) {
   // CHECK-LABEL: test_sminserth_f32_m
   // CHECK: %[[PG:.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg)
@@ -166,6 +174,14 @@ smfloat16_t test_sminsertv_f16_m(svbool_t pg, smfloat16_t dest, uint32_t idx, sv
   // CHECK: %[[INTRINSIC:.*]] = call <mscale x 64 x half> @llvm.aarch64.sme.mova.col.mxv64f16.nxv8f16(<vscale x 8 x i1> %[[PG]], <mscale x 64 x half> %dest, i32 %idx, i64 0, <vscale x 8 x half> %src)
   // CHECK: ret <mscale x 64 x half> %[[INTRINSIC]]
   return SME_ACLE_FUNC(sminsertv,_f16,_m,)(pg, dest, idx, src);
+}
+
+smbfloat16_t test_sminsertv_bf16_m(svbool_t pg, smbfloat16_t dest, uint32_t idx, svbfloat16_t src) {
+  // CHECK-LABEL: test_sminsertv_bf16_m
+  // CHECK: %[[PG:.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %pg)
+  // CHECK: %[[INTRINSIC:.*]] = call <mscale x 64 x bfloat> @llvm.aarch64.sme.mova.col.mxv64bf16.nxv8bf16(<vscale x 8 x i1> %[[PG]], <mscale x 64 x bfloat> %dest, i32 %idx, i64 0, <vscale x 8 x bfloat> %src)
+  // CHECK: ret <mscale x 64 x bfloat> %[[INTRINSIC]]
+  return SME_ACLE_FUNC(sminsertv,_bf16,_m,)(pg, dest, idx, src);
 }
 
 smfloat32_t test_sminsertv_f32_m(svbool_t pg, smfloat32_t dest, uint32_t idx, svfloat32_t src) {

@@ -82,6 +82,14 @@ void test_smst1h_f16(svbool_t pg, smfloat16_t src, uint32_t idx, float16_t *dest
   SME_ACLE_FUNC(smst1h,_f16,,)(pg, src, idx, dest);
 }
 
+void test_smst1h_bf16(svbool_t pg, smbfloat16_t src, uint32_t idx, bfloat16_t *dest) {
+  // CHECK-LABEL: test_smst1h_bf16
+  // CHECK: %[[PG:.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %pg)
+  // CHECK: call void @llvm.aarch64.sme.st1.row.mxv64bf16(<vscale x 8 x i1> %[[PG]], <mscale x 64 x bfloat> %src, i32 %idx, i64 0, bfloat* %dest)
+  // CHECK: ret void
+  SME_ACLE_FUNC(smst1h,_bf16,,)(pg, src, idx, dest);
+}
+
 void test_smst1h_f32(svbool_t pg, smfloat32_t src, uint32_t idx, float32_t *dest) {
   // CHECK-LABEL: test_smst1h_f32
   // CHECK: %[[PG:.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg)
@@ -166,6 +174,15 @@ void test_smst1v_f16(svbool_t pg, smfloat16_t src, uint32_t idx, float16_t *dest
   // CHECK: call void @llvm.aarch64.sme.st1.col.mxv64f16(<vscale x 8 x i1> %[[PG]], <mscale x 64 x half> %src, i32 %idx, i64 0, half* %dest)
   // CHECK: ret void
   SME_ACLE_FUNC(smst1v,_f16,,)(pg, src, idx, dest);
+}
+
+void test_smst1v_bf16(svbool_t pg, smbfloat16_t src, uint32_t idx, bfloat16_t *dest) {
+  // CHECK-LABEL: test_smst1v_bf16
+  // CHECK: %[[PG:.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %pg)
+  // CHECK: call void @llvm.aarch64.sme.st1.col.mxv64b
+  // f16(<vscale x 8 x i1> %[[PG]], <mscale x 64 x half> %src, i32 %idx, i64 0, half* %dest)
+  // CHECK: ret void
+  SME_ACLE_FUNC(smst1v,_bf16,,)(pg, src, idx, dest);
 }
 
 void test_smst1v_f32(svbool_t pg, smfloat32_t src, uint32_t idx, float32_t *dest) {

@@ -67,6 +67,13 @@ smfloat16_t test_smzero_f16() {
   return smzero_f16();
 }
 
+smbfloat16_t test_smzero_bf16() {
+  // CHECK-LABEL: test_smzero_bf16
+  // CHECK: %[[INTRINSIC:.*]] = call <mscale x 64 x bfloat> @llvm.aarch64.sme.zero.mxv64bf16()
+  // CHECK: <mscale x 64 x bfloat> %[[INTRINSIC]]
+  return smzero_bf16();
+}
+
 smfloat32_t test_smzero_f32() {
   // CHECK-LABEL: test_smzero_f32
   // CHECK: %[[INTRINSIC:.*]] = call <mscale x 16 x float> @llvm.aarch64.sme.zero.mxv16f32()

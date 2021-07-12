@@ -82,6 +82,14 @@ svfloat16_t test_smextracth_f16_m(svbool_t pg, smfloat16_t src, uint32_t idx) {
   return SME_ACLE_FUNC(smextracth,_f16,_m,)(pg, src, idx);
 }
 
+svbfloat16_t test_smextracth_bf16_m(svbool_t pg, smbfloat16_t src, uint32_t idx) {
+  // CHECK: test_smextracth_bf16_m
+  // CHECK: %[[PG:.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %pg)
+  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x bfloat> @llvm.aarch64.sme.mova.vec.row.nxv8bf16.mxv64bf16(<vscale x 8 x i1> %[[PG]], <mscale x 64 x bfloat> %src, i32 %idx, i64 0)
+  // CHECK: ret <vscale x 8 x bfloat> %[[INTRINSIC]]
+  return SME_ACLE_FUNC(smextracth,_bf16,_m,)(pg, src, idx);
+}
+
 svfloat32_t test_smextracth_f32_m(svbool_t pg, smfloat32_t src, uint32_t idx) {
   // CHECK: test_smextracth_f32_m
   // CHECK: %[[PG:.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg)
@@ -166,6 +174,14 @@ svfloat16_t test_smextractv_f16_m(svbool_t pg, smfloat16_t src, uint32_t idx) {
   // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x half> @llvm.aarch64.sme.mova.vec.col.nxv8f16.mxv64f16(<vscale x 8 x i1> %[[PG]], <mscale x 64 x half> %src, i32 %idx, i64 0)
   // CHECK: ret <vscale x 8 x half> %[[INTRINSIC]]
   return SME_ACLE_FUNC(smextractv,_f16,_m,)(pg, src, idx);
+}
+
+svbfloat16_t test_smextractv_bf16_m(svbool_t pg, smbfloat16_t src, uint32_t idx) {
+  // CHECK: test_smextractv_bf16_m
+  // CHECK: %[[PG:.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %pg)
+  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 8 x bfloat> @llvm.aarch64.sme.mova.vec.col.nxv8bf16.mxv64bf16(<vscale x 8 x i1> %[[PG]], <mscale x 64 x bfloat> %src, i32 %idx, i64 0)
+  // CHECK: ret <vscale x 8 x bfloat> %[[INTRINSIC]]
+  return SME_ACLE_FUNC(smextractv,_bf16,_m,)(pg, src, idx);
 }
 
 svfloat32_t test_smextractv_f32_m(svbool_t pg, smfloat32_t src, uint32_t idx) {

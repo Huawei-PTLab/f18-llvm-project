@@ -82,6 +82,14 @@ smfloat16_t test_smld1h_f16(svbool_t pg, smfloat16_t dest, uint32_t idx, float16
   return SME_ACLE_FUNC(smld1h,_f16,,)(pg, dest, idx, src);
 }
 
+smbfloat16_t test_smld1h_bf16(svbool_t pg, smbfloat16_t dest, uint32_t idx, bfloat16_t const *src) {
+  // CHECK-LABEL: test_smld1h_bf16
+  // CHECK: %[[PG:.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %pg)
+  // CHECK: %[[INTRINSIC:.*]] = call <mscale x 64 x bfloat> @llvm.aarch64.sme.ld1.row.mxv64bf16(<vscale x 8 x i1> %[[PG]], <mscale x 64 x bfloat> %dest, i32 %idx, i64 0, bfloat* %src)
+  // CHECK: ret <mscale x 64 x bfloat> %[[INTRINSIC]]
+  return SME_ACLE_FUNC(smld1h,_bf16,,)(pg, dest, idx, src);
+}
+
 smfloat32_t test_smld1h_f32(svbool_t pg, smfloat32_t dest, uint32_t idx, float32_t const *src) {
   // CHECK-LABEL: test_smld1h_f32
   // CHECK: %[[PG:.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg)
@@ -166,6 +174,14 @@ smfloat16_t test_smld1v_f16(svbool_t pg, smfloat16_t dest, uint32_t idx, float16
   // CHECK: %[[INTRINSIC:.*]] = call <mscale x 64 x half> @llvm.aarch64.sme.ld1.col.mxv64f16(<vscale x 8 x i1> %[[PG]], <mscale x 64 x half> %dest, i32 %idx, i64 0, half* %src)
   // CHECK: ret <mscale x 64 x half> %[[INTRINSIC]]
   return SME_ACLE_FUNC(smld1v,_f16,,)(pg, dest, idx, src);
+}
+
+smbfloat16_t test_smld1v_bf16(svbool_t pg, smbfloat16_t dest, uint32_t idx, bfloat16_t const *src) {
+  // CHECK-LABEL: test_smld1v_bf16
+  // CHECK: %[[PG:.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> %pg)
+  // CHECK: %[[INTRINSIC:.*]] = call <mscale x 64 x bfloat> @llvm.aarch64.sme.ld1.col.mxv64bf16(<vscale x 8 x i1> %[[PG]], <mscale x 64 x bfloat> %dest, i32 %idx, i64 0, bfloat* %src)
+  // CHECK: ret <mscale x 64 x bfloat> %[[INTRINSIC]]
+  return SME_ACLE_FUNC(smld1v,_bf16,,)(pg, dest, idx, src);
 }
 
 smfloat32_t test_smld1v_f32(svbool_t pg, smfloat32_t dest, uint32_t idx, float32_t const *src) {

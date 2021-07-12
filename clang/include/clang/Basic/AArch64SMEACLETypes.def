@@ -55,7 +55,7 @@ SME_VECTOR_TYPE("__SMFloat16_t", "__SMFloat16_t", SmeFloat16, SmeFloat16Ty, 64, 
 SME_VECTOR_TYPE("__SMFloat32_t", "__SMFloat32_t", SmeFloat32, SmeFloat32Ty, 16, 32, true, true, false)
 SME_VECTOR_TYPE("__SMFloat64_t", "__SMFloat64_t", SmeFloat64, SmeFloat64Ty, 4, 64, true, true, false)
 
-SME_VECTOR_TYPE("__SMBFloat16_t", "__SMBFloat16_t", SmeBFloat16, SmeBFloat16Ty, 64, 16, true, true, true)
+SME_VECTOR_TYPE("__SMBFloat16_t", "__SMBFloat16_t", SmeBFloat16, SmeBFloat16Ty, 64, 16, true, false, true)
 
 #undef SME_VECTOR_TYPE
 #undef SME_TYPE

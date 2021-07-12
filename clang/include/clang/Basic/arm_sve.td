@@ -803,16 +803,16 @@ let ArchGuard = "defined(__ARM_FEATURE_SME)" in {
   def SMLDR : MInst<"smldr[_{d}]", "yymQ", "cUc", [IsSME], MemEltTyDefault, "aarch64_sme_ldr">;
   def SMSTR : MInst<"smstr[_{d}]", "vym%", "cUc", [IsSME], MemEltTyDefault, "aarch64_sme_str">;
 
-  def SMLD1H : MInst<"smld1h[_{d}]", "yPymc", "csilUcUsUiUlhfd", [IsSME, IsSMELoad], MemEltTyDefault, "aarch64_sme_ld1_row">;
-  def SMLD1V : MInst<"smld1v[_{d}]", "yPymc", "csilUcUsUiUlhfd", [IsSME, IsSMELoad], MemEltTyDefault, "aarch64_sme_ld1_col">;
-  def SMST1H : MInst<"smst1h[_{d}]", "vPymp", "csilUcUsUiUlhfd", [IsSME, IsSMEStore], MemEltTyDefault, "aarch64_sme_st1_row">;
-  def SMST1V : MInst<"smst1v[_{d}]", "vPymp", "csilUcUsUiUlhfd", [IsSME, IsSMEStore], MemEltTyDefault, "aarch64_sme_st1_col">;
+  def SMLD1H : MInst<"smld1h[_{d}]", "yPymc", "csilUcUsUiUlhbfd", [IsSME, IsSMELoad], MemEltTyDefault, "aarch64_sme_ld1_row">;
+  def SMLD1V : MInst<"smld1v[_{d}]", "yPymc", "csilUcUsUiUlhbfd", [IsSME, IsSMELoad], MemEltTyDefault, "aarch64_sme_ld1_col">;
+  def SMST1H : MInst<"smst1h[_{d}]", "vPymp", "csilUcUsUiUlhbfd", [IsSME, IsSMEStore], MemEltTyDefault, "aarch64_sme_st1_row">;
+  def SMST1V : MInst<"smst1v[_{d}]", "vPymp", "csilUcUsUiUlhbfd", [IsSME, IsSMEStore], MemEltTyDefault, "aarch64_sme_st1_col">;
 
-  def SMINSERTH : SInst<"sminserth[_{d}]", "yPymd", "csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_mova_row", [IsSME, IsSMEMova]>;
-  def SMINSERTV : SInst<"sminsertv[_{d}]", "yPymd", "csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_mova_col", [IsSME, IsSMEMova]>;
+  def SMINSERTH : SInst<"sminserth[_{d}]", "yPymd", "csilUcUsUiUlhbfd", MergeOp1, "aarch64_sme_mova_row", [IsSME, IsSMEMova]>;
+  def SMINSERTV : SInst<"sminsertv[_{d}]", "yPymd", "csilUcUsUiUlhbfd", MergeOp1, "aarch64_sme_mova_col", [IsSME, IsSMEMova]>;
 
-  def SMEXTRACTH : SInst<"smextracth[_{d}]", "dPym","csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_mova_vec_row", [IsSME, IsSMEMovaVec]>;
-  def SMEXTRACTV : SInst<"smextractv[_{d}]", "dPym","csilUcUsUiUlhfd", MergeOp1, "aarch64_sme_mova_vec_col", [IsSME, IsSMEMovaVec]>;
+  def SMEXTRACTH : SInst<"smextracth[_{d}]", "dPym","csilUcUsUiUlhbfd", MergeOp1, "aarch64_sme_mova_vec_row", [IsSME, IsSMEMovaVec]>;
+  def SMEXTRACTV : SInst<"smextractv[_{d}]", "dPym","csilUcUsUiUlhbfd", MergeOp1, "aarch64_sme_mova_vec_col", [IsSME, IsSMEMovaVec]>;
 
   def SMOPA : SInst<"smmopa[_{0}_{d}]", "?PP?dd", "csUcUs", MergeOp1, "aarch64_sme_smopa", [IsSME, IsOverloadRetLast]>;
   def SMOPS : SInst<"smmops[_{0}_{d}]", "?PP?dd", "csUcUs", MergeOp1, "aarch64_sme_smops", [IsSME, IsOverloadRetLast]>;
@@ -825,7 +825,7 @@ let ArchGuard = "defined(__ARM_FEATURE_SME)" in {
   def SMSTART_ZA : SInst<"smstart", "v", "", MergeNone, "aarch64_sme_start", [IsSME, IsFirstArgOne, IsOverloadNone]>;
   def SMSTOP     : SInst<"smstop", "v", "", MergeNone, "aarch64_sme_stop", [IsSME, IsFirstArgOne, IsOverloadNone]>;
 
-  def SMZERO : SInst<"smzero_{d}", "y", "csilUcUsUiUlhfd", MergeNone, "aarch64_sme_zero", [IsSME]>;
+  def SMZERO : SInst<"smzero_{d}", "y", "csilUcUsUiUlhbfd", MergeNone, "aarch64_sme_zero", [IsSME]>;
 }
 //------------------------------------------------------------------------------
 
