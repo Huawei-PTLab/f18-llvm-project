@@ -1,0 +1,140 @@
+# RUN: llc -mtriple=aarch64-linux-gnu -run-pass=greedy %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-linux-gnu -start-before=greedy -stop-after=aarch64-expand-pseudo %s -o - | FileCheck %s --check-prefix=EXPAND
+--- |
+  ; ModuleID = '<stdin>'
+  source_filename = "<stdin>"
+  target triple = "aarch4-linux-gnu"
+
+  define void  @spill_fill_stack_d() #0 { entry: unreachable }
+  define void  @spill_fill_stack_w() #0 { entry: unreachable }
+  define void  @spill_fill_stack_h() #0 { entry: unreachable }
+  define void  @spill_fill_stack_b() #0 { entry: unreachable }
+
+  attributes #0 = { nounwind "target-features"="+sme" }
+
+...
+---
+name: spill_fill_stack_d
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: mpr64 }
+stack:
+liveins:
+  - {reg: '$zad0', virtual-reg: '%0' }
+body:          |
+  bb.0.entry:
+     liveins: $zad0, $z0, $w12, $p0
+
+  ; CHECK-LABEL: name: spill_fill_stack_d
+  ; CHECK: stack:
+  ; CHECK: - { id: 0, name: '', type: spill-slot, offset: 0, size: 32, alignment: 16,
+  ; CHECK-NEXT: stack-id: scalable-matrix, callee-saved-register: '', callee-saved-restored: true,
+
+  ; EXPAND-LABEL: name: spill_fill_stack_d
+  ; EXPAND: ST1_MXIPXX_H_D $zad0, $w13, 0, $p1, $sp, $x9
+  ; EXPAND: $zad0 = LD1_MXIPXX_H_D $zad0, $w13, 0, $p1, $sp, $x9
+
+
+  %0:mpr64 = SMECOPY_D $zad0 , $z0, $p0, $w12
+
+  $zad0 = IMPLICIT_DEF
+  $zad1 = IMPLICIT_DEF
+  $zad2 = IMPLICIT_DEF
+  $zad3 = IMPLICIT_DEF
+  $zad4 = IMPLICIT_DEF
+  $zad5 = IMPLICIT_DEF
+  $zad6 = IMPLICIT_DEF
+  $zad7 = IMPLICIT_DEF
+
+  $zad0 = SMECOPY_D %0, $z0, $p0, $w12
+  RET_ReallyLR
+...
+---
+name: spill_fill_stack_w
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: mpr32 }
+stack:
+liveins:
+  - {reg: '$zas0', virtual-reg: '%0' }
+body:          |
+  bb.0.entry:
+     liveins: $zas0, $z0, $w12, $p0
+
+  ; CHECK-LABEL: name: spill_fill_stack_w
+  ; CHECK: stack:
+  ; CHECK: - { id: 0, name: '', type: spill-slot, offset: 0, size: 64, alignment: 16,
+  ; CHECK-NEXT: stack-id: scalable-matrix, callee-saved-register: '', callee-saved-restored: true,
+
+  ; EXPAND-LABEL: name: spill_fill_stack_w
+  ; EXPAND: ST1_MXIPXX_H_S $zas0, $w13, 0, $p1, $sp, $x9
+  ; EXPAND: $zas0 = LD1_MXIPXX_H_S $zas0, $w13, 0, $p1, $sp, $x9
+
+  %0:mpr32 = SMECOPY_W $zas0, $z0, $p0, $w12
+
+  $zas0 = IMPLICIT_DEF
+  $zas1 = IMPLICIT_DEF
+  $zas2 = IMPLICIT_DEF
+  $zas3 = IMPLICIT_DEF
+
+  $zas0 = SMECOPY_W %0, $z0, $p0, $w12
+  RET_ReallyLR
+...
+---
+name: spill_fill_stack_h
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: mpr16 }
+stack:
+liveins:
+  - {reg: '$zah0', virtual-reg: '%0' }
+body:          |
+  bb.0.entry:
+     liveins: $zah0, $z0, $w12, $p0
+
+  ; CHECK-LABEL: name: spill_fill_stack_h
+  ; CHECK: stack:
+  ; CHECK: - { id: 0, name: '', type: spill-slot, offset: 0, size: 128, alignment: 16,
+  ; CHECK-NEXT: stack-id: scalable-matrix, callee-saved-register: '', callee-saved-restored: true,
+
+  ; EXPAND-LABEL: name: spill_fill_stack_h
+  ; EXPAND: ST1_MXIPXX_H_H $zah0, $w13, 0, $p1, $sp, $x9
+  ; EXPAND: $zah0 = LD1_MXIPXX_H_H $zah0, $w13, 0, $p1, $sp, $x9
+
+  %0:mpr16 = SMECOPY_H $zah0, $z0, $p0, $w12
+
+  $zah0 = IMPLICIT_DEF
+  $zah1 = IMPLICIT_DEF
+
+  $zah0 = SMECOPY_H %0, $z0, $p0, $w12
+  RET_ReallyLR
+...
+---
+name: spill_fill_stack_b
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: mpr8 }
+stack:
+liveins:
+  - {reg: '$zab0', virtual-reg: '%0' }
+body:          |
+  bb.0.entry:
+     liveins: $zab0, $z0, $w12, $p0
+
+  ; CHECK-LABEL: name: spill_fill_stack_b
+  ; CHECK: stack:
+  ; CHECK: - { id: 0, name: '', type: spill-slot, offset: 0, size: 256, alignment: 16,
+  ; CHECK-NEXT: stack-id: scalable-matrix, callee-saved-register: '', callee-saved-restored: true,
+
+  ; EXPAND-LABEL: name: spill_fill_stack_b
+  ; EXPAND: ST1_MXIPXX_H_B $zab0, $w13, 0, $p1, $sp, $x9
+  ; EXPAND: $zab0 = LD1_MXIPXX_H_B $zab0, $w13, 0, $p1, $sp, $x9
+
+  %0:mpr8 = SMECOPY_B $zab0, $z0, $p0, $w12
+
+  $zab0 = IMPLICIT_DEF
+
+  $zab0 = SMECOPY_B %0, $z0, $p0, $w12
+  RET_ReallyLR
+...
+

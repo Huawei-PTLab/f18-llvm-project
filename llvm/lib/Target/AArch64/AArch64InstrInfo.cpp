@@ -3631,6 +3631,42 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   llvm_unreachable("unimplemented reg-to-reg copy");
 }
 
+static MachineInstrBuilder
+printSMEspillfill(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                  const MCInstrDesc &impDef, unsigned Opc,
+                  const MCInstrDesc &Op, Register Reg, bool isKill, int FI) {
+  MachineFunction &MF = *MBB.getParent();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  Register P = MRI.createVirtualRegister(&AArch64::PPRRegClass);
+  Register Sel = MRI.createVirtualRegister(&AArch64::MatrixIndexGPR32_12_15RegClass);
+  Register Xn = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+  Register Xm = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+
+  BuildMI(MBB, MBBI, DebugLoc(), impDef, P);
+  BuildMI(MBB, MBBI, DebugLoc(), impDef, Sel);
+  BuildMI(MBB, MBBI, DebugLoc(), impDef, Xn);
+  BuildMI(MBB, MBBI, DebugLoc(), impDef, Xm);
+
+  MachineInstrBuilder MI = BuildMI(MBB, MBBI, DebugLoc(), Op);
+
+  if (Opc == AArch64::LD1H_ZaXI_B || Opc == AArch64::LD1H_ZaXI_W ||
+      Opc == AArch64::LD1H_ZaXI_H || Opc == AArch64::LD1H_ZaXI_D)
+    MI.addReg(Reg, getDefRegState(true));
+  if (Opc == AArch64::ST1H_ZaXI_B || Opc == AArch64::ST1H_ZaXI_W ||
+      Opc == AArch64::ST1H_ZaXI_H || Opc == AArch64::ST1H_ZaXI_D)
+    MI.addReg(Reg, getKillRegState(isKill));
+
+  MI.addFrameIndex(FI);
+  MI.addImm(0);
+  MI.addReg(Sel);
+  MI.addReg(Xn);
+  MI.addReg(Xm);
+  MI.addReg(P);
+
+  return MI;
+}
+
 static void storeRegPairToStackSlot(const TargetRegisterInfo &TRI,
                                     MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator InsertBefore,
@@ -3724,6 +3760,9 @@ void AArch64InstrInfo::storeRegToStackSlot(
       assert(Subtarget.hasSVE() && "Unexpected register store without SVE");
       Opc = AArch64::STR_ZXI;
       StackID = TargetStackID::ScalableVector;
+    } else if (AArch64::MPR128RegClass.hasSubClassEq(RC)) {
+      Opc = AArch64::ST1H_ZaXI_Q;
+      StackID = TargetStackID::ScalableMatrix;
     }
     break;
   case 24:
@@ -3746,6 +3785,9 @@ void AArch64InstrInfo::storeRegToStackSlot(
       assert(Subtarget.hasSVE() && "Unexpected register store without SVE");
       Opc = AArch64::STR_ZZXI;
       StackID = TargetStackID::ScalableVector;
+    } else if (AArch64::MPR64RegClass.hasSubClassEq(RC)) {
+      Opc = AArch64::ST1H_ZaXI_D;
+      StackID = TargetStackID::ScalableMatrix;
     }
     break;
   case 48:
@@ -3768,18 +3810,40 @@ void AArch64InstrInfo::storeRegToStackSlot(
       assert(Subtarget.hasSVE() && "Unexpected register store without SVE");
       Opc = AArch64::STR_ZZZZXI;
       StackID = TargetStackID::ScalableVector;
+    } else if (AArch64::MPR32RegClass.hasSubClassEq(RC)) {
+      Opc = AArch64::ST1H_ZaXI_W;
+      StackID = TargetStackID::ScalableMatrix;
+    }
+    break;
+  case 128:
+    if (AArch64::MPR16RegClass.hasSubClassEq(RC)) {
+      Opc = AArch64::ST1H_ZaXI_H;
+      StackID = TargetStackID::ScalableMatrix;
+    }
+    break;
+  case 256:
+    if (AArch64::MPR8RegClass.hasSubClassEq(RC)) {
+      Opc = AArch64::ST1H_ZaXI_B;
+      StackID = TargetStackID::ScalableMatrix;
     }
     break;
   }
   assert(Opc && "Unknown register class");
   MFI.setStackID(FI, StackID);
 
-  const MachineInstrBuilder MI = BuildMI(MBB, MBBI, DebugLoc(), get(Opc))
-                                     .addReg(SrcReg, getKillRegState(isKill))
-                                     .addFrameIndex(FI);
+  MachineInstrBuilder MI;
 
-  if (Offset)
-    MI.addImm(0);
+  if (StackID == TargetStackID::ScalableMatrix) {
+    MI = printSMEspillfill(MBB, MBBI, get(TargetOpcode::IMPLICIT_DEF), Opc,
+                           get(Opc), SrcReg, isKill, FI);
+  } else {
+    MI = BuildMI(MBB, MBBI, DebugLoc(), get(Opc))
+             .addReg(SrcReg, getKillRegState(isKill))
+             .addFrameIndex(FI);
+    if (Offset)
+      MI.addImm(0);
+  }
+
   MI.addMemOperand(MMO);
 }
 
@@ -3878,6 +3942,9 @@ void AArch64InstrInfo::loadRegFromStackSlot(
       assert(Subtarget.hasSVE() && "Unexpected register load without SVE");
       Opc = AArch64::LDR_ZXI;
       StackID = TargetStackID::ScalableVector;
+    } else if (AArch64::MPR128RegClass.hasSubClassEq(RC)) {
+      Opc = AArch64::LD1H_ZaXI_Q;
+      StackID = TargetStackID::ScalableMatrix;
     }
     break;
   case 24:
@@ -3900,6 +3967,9 @@ void AArch64InstrInfo::loadRegFromStackSlot(
       assert(Subtarget.hasSVE() && "Unexpected register load without SVE");
       Opc = AArch64::LDR_ZZXI;
       StackID = TargetStackID::ScalableVector;
+    } else if (AArch64::MPR64RegClass.hasSubClassEq(RC)) {
+      Opc = AArch64::LD1H_ZaXI_D;
+      StackID = TargetStackID::ScalableMatrix;
     }
     break;
   case 48:
@@ -3922,6 +3992,21 @@ void AArch64InstrInfo::loadRegFromStackSlot(
       assert(Subtarget.hasSVE() && "Unexpected register load without SVE");
       Opc = AArch64::LDR_ZZZZXI;
       StackID = TargetStackID::ScalableVector;
+    } else if (AArch64::MPR32RegClass.hasSubClassEq(RC)) {
+      Opc = AArch64::LD1H_ZaXI_W;
+      StackID = TargetStackID::ScalableMatrix;
+    }
+    break;
+  case 128:
+    if (AArch64::MPR16RegClass.hasSubClassEq(RC)) {
+      Opc = AArch64::LD1H_ZaXI_H;
+      StackID = TargetStackID::ScalableMatrix;
+    }
+    break;
+  case 256:
+    if (AArch64::MPR8RegClass.hasSubClassEq(RC)) {
+      Opc = AArch64::LD1H_ZaXI_B;
+      StackID = TargetStackID::ScalableMatrix;
     }
     break;
   }
@@ -3929,11 +4014,19 @@ void AArch64InstrInfo::loadRegFromStackSlot(
   assert(Opc && "Unknown register class");
   MFI.setStackID(FI, StackID);
 
-  const MachineInstrBuilder MI = BuildMI(MBB, MBBI, DebugLoc(), get(Opc))
-                                     .addReg(DestReg, getDefRegState(true))
-                                     .addFrameIndex(FI);
-  if (Offset)
-    MI.addImm(0);
+  MachineInstrBuilder MI;
+
+  if (StackID == TargetStackID::ScalableMatrix) {
+    MI = printSMEspillfill(MBB, MBBI, get(TargetOpcode::IMPLICIT_DEF), Opc,
+                           get(Opc), DestReg, true, FI);
+  } else {
+    MI = BuildMI(MBB, MBBI, DebugLoc(), get(Opc))
+             .addReg(DestReg, getDefRegState(true))
+             .addFrameIndex(FI);
+    if (Offset)
+      MI.addImm(0);
+  }
+
   MI.addMemOperand(MMO);
 }
 
