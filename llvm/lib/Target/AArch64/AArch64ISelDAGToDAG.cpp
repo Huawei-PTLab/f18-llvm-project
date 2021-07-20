@@ -3637,6 +3637,9 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
   }
 
   case ISD::CopyFromReg: {
+    // t24: mxv16f32,ch = CopyFromReg t0, Register:mxv16f32 %75
+    // t63: mxv16f32,ch = SMECOPY_W Register:mxv16f32 %53, IMPLICIT_DEF:nxv4f32,
+    // IMPLICIT_DEF:nxv4i1, IMPLICIT_DEF:i32, t0
     EVT VT1 = Node->getOperand(0).getValueType();
     EVT VT2 = Node->getOperand(1).getValueType();
     SDValue Chain = Node->getOperand(0);
@@ -3677,6 +3680,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     }
     break;
   }
+
   case ISD::INTRINSIC_W_CHAIN: {
     unsigned IntNo = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
     switch (IntNo) {

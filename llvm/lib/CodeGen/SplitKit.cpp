@@ -502,17 +502,51 @@ void SplitEditor::forceRecompute(unsigned RegIdx, const VNInfo &ParentVNI) {
   VFP = ValueForcePair(nullptr, true);
 }
 
+MachineInstr *
+SplitEditor::buildSMECopy(Register FromReg, Register ToReg,
+                          MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator InsertBefore, bool Late) {
+  SlotIndexes &Indexes = *LIS.getSlotIndexes();
+  Register ZaReg = Edit->createFrom(TRI.getVector());
+  Register Pred = Edit->createFrom(TRI.getPredicate());
+  Register Selector = Edit->createFrom(TRI.getSelector());
+  MachineInstr *Za = BuildMI(MBB, InsertBefore, DebugLoc(),
+                             TII.get(TargetOpcode::IMPLICIT_DEF), ZaReg);
+  MachineInstr *P = BuildMI(MBB, InsertBefore, DebugLoc(),
+                            TII.get(TargetOpcode::IMPLICIT_DEF), Pred);
+  MachineInstr *Q = BuildMI(MBB, InsertBefore, DebugLoc(),
+                            TII.get(TargetOpcode::IMPLICIT_DEF), Selector);
+  Indexes.insertMachineInstrInMaps(*Za, Late).getRegSlot();
+  Indexes.insertMachineInstrInMaps(*P, Late).getRegSlot();
+  Indexes.insertMachineInstrInMaps(*Q, Late).getRegSlot();
+  MachineInstr *CopyMI = BuildMI(MBB, InsertBefore, DebugLoc(),
+                                 TII.get(TII.getSMECopyInstr(MRI, FromReg)))
+                             .addReg(ToReg, RegState::Define)
+                             .addReg(FromReg)
+                             .addReg(ZaReg)
+                             .addReg(Pred)
+                             .addReg(Selector);
+  return CopyMI;
+}
+
 SlotIndex SplitEditor::buildSingleSubRegCopy(Register FromReg, Register ToReg,
     MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
     unsigned SubIdx, LiveInterval &DestLI, bool Late, SlotIndex Def) {
   const MCInstrDesc &Desc = TII.get(TargetOpcode::COPY);
   bool FirstCopy = !Def.isValid();
-  MachineInstr *CopyMI = BuildMI(MBB, InsertBefore, DebugLoc(), Desc)
-      .addReg(ToReg, RegState::Define | getUndefRegState(FirstCopy)
-              | getInternalReadRegState(!FirstCopy), SubIdx)
-      .addReg(FromReg, 0, SubIdx);
-
+  MachineInstr *CopyMI;
   SlotIndexes &Indexes = *LIS.getSlotIndexes();
+  if (TRI.isSMERegisters(MRI.getRegClass(FromReg))) {
+    CopyMI = buildSMECopy(FromReg, ToReg, MBB, InsertBefore, Late);
+  } else {
+    CopyMI = BuildMI(MBB, InsertBefore, DebugLoc(), Desc)
+                 .addReg(ToReg,
+                         RegState::Define | getUndefRegState(FirstCopy) |
+                             getInternalReadRegState(!FirstCopy),
+                         SubIdx)
+                 .addReg(FromReg, 0, SubIdx);
+  }
+
   if (FirstCopy) {
     Def = Indexes.insertMachineInstrInMaps(*CopyMI, Late).getRegSlot();
   } else {
@@ -526,24 +560,13 @@ SlotIndex SplitEditor::buildCopy(Register FromReg, Register ToReg,
     MachineBasicBlock::iterator InsertBefore, bool Late, unsigned RegIdx) {
 
   const MCInstrDesc &Desc = TII.get(TargetOpcode::COPY);
-  SlotIndexes &Indexes = *LIS.getSlotIndexes();
   MachineInstr *CopyMI;
+  SlotIndexes &Indexes = *LIS.getSlotIndexes();
   if (LaneMask.all() || LaneMask == MRI.getMaxLaneMaskForVReg(FromReg)) {
-    // insert SMECOPY
     assert(MRI.getRegClass(FromReg) == MRI.getRegClass(ToReg) &&
            "Should have same reg class");
     if (TRI.isSMERegisters(MRI.getRegClass(FromReg))) {
-      Register ZaReg = Edit->createFrom(TRI.getVector());
-      Register Pred = Edit->createFrom(TRI.getPredicate());
-      Register Selector = Edit->createFrom(TRI.getSelector());
-      CopyMI = BuildMI(MBB, InsertBefore, DebugLoc(),
-                       TII.get(TII.getSMECopyInstr(MRI, FromReg)))
-                   .addReg(ToReg, RegState::Define)
-                   .addReg(FromReg)
-                   .addReg(ZaReg)
-                   .addReg(Pred)
-                   .addReg(Selector);
-      // create additional registers and add it to the SME Copy
+      CopyMI = buildSMECopy(FromReg, ToReg, MBB, InsertBefore, Late);
     } else { // The full vreg is copied.
       CopyMI =
           BuildMI(MBB, InsertBefore, DebugLoc(), Desc, ToReg).addReg(FromReg);

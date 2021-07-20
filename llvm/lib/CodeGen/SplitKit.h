@@ -448,6 +448,11 @@ private:
       MachineBasicBlock &MB, MachineBasicBlock::iterator InsertBefore,
       unsigned SubIdx, LiveInterval &DestLI, bool Late, SlotIndex Def);
 
+  MachineInstr *buildSMECopy(Register FromReg, Register ToReg,
+                             MachineBasicBlock &MB,
+                             MachineBasicBlock::iterator InsertBefore,
+                             bool Late);
+
 public:
   /// Create a new SplitEditor for editing the LiveInterval analyzed by SA.
   /// Newly created intervals will be appended to newIntervals.

@@ -483,6 +483,41 @@ unsigned AArch64InstrInfo::removeBranch(MachineBasicBlock &MBB,
   return 2;
 }
 
+MachineInstr *AArch64InstrInfo::createTileCopy(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator InsPt,
+    const DebugLoc &DL, Register Src, unsigned SrcSubReg, Register Dst) const {
+  MachineFunction &MF = *MBB.getParent();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+
+  Register Za = MRI.createVirtualRegister(TRI->getVector());
+  Register Pred = MRI.createVirtualRegister(TRI->getPredicate());
+  Register Selector = MRI.createVirtualRegister(TRI->getSelector());
+
+  BuildMI(MBB, InsPt, DL, get(TargetOpcode::IMPLICIT_DEF), Za);
+  BuildMI(MBB, InsPt, DL, get(TargetOpcode::IMPLICIT_DEF), Pred);
+  BuildMI(MBB, InsPt, DL, get(TargetOpcode::IMPLICIT_DEF), Selector);
+
+  MachineInstr *PHICopy = nullptr;
+  if (!SrcSubReg) {
+    PHICopy = BuildMI(MBB, InsPt, DL, get(TII->getSMECopyInstr(MRI, Dst)))
+                  .addReg(Dst, RegState::Define)
+                  .addReg(Src)
+                  .addReg(Za)
+                  .addReg(Pred)
+                  .addReg(Selector);
+  } else {
+    PHICopy = BuildMI(MBB, InsPt, DL, get(TII->getSMECopyInstr(MRI, Src)))
+                  .addReg(Dst, RegState::Define)
+                  .addReg(Src, 0, SrcSubReg)
+                  .addReg(Za)
+                  .addReg(Pred)
+                  .addReg(Selector);
+  }
+  return PHICopy;
+}
+
 void AArch64InstrInfo::instantiateCondBranch(
     MachineBasicBlock &MBB, const DebugLoc &DL, MachineBasicBlock *TBB,
     ArrayRef<MachineOperand> Cond) const {
@@ -7975,6 +8010,18 @@ unsigned AArch64InstrInfo::getSMECopyInstr(const MachineRegisterInfo &MRI,
     return AArch64::SMECOPY_B;
   else
     return 0;
+}
+
+bool AArch64InstrInfo::isSMECopy(const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+  case AArch64::SMECOPY_W:
+  case AArch64::SMECOPY_H:
+  case AArch64::SMECOPY_D:
+  case AArch64::SMECOPY_B:
+    return true;
+  }
 }
 
 Optional<RegImmPair> AArch64InstrInfo::isAddImmediate(const MachineInstr &MI,

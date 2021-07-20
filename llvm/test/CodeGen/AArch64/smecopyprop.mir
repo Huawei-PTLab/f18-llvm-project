@@ -1,0 +1,52 @@
+# RUN: llc -mtriple=aarch64-linux-gnu -run-pass machine-cp -o - %s | FileCheck %s
+# Tests for SMECOPY forwarding in MachineCopyPropagation.
+---
+# Simple forwarding (renamable case).
+# CHECK-LABEL: name: test1
+# CHECK:       ST1_MXIPXX_H_S $zas0, $w12, 0, $p0, $x0, $x1
+name: test1
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $zas0, $p0, $z0, $w12, $x0, $x1
+    renamable $zas1 = SMECOPY_W $zas0, $z0, $p0, $w12
+    ST1_MXIPXX_H_S renamable $zas1, $w12, 0, $p0, $x0, $x1
+...
+---
+# Do not forward if not renamable.
+# CHECK-LABEL: name: test2
+# CHECK:       ST1_MXIPXX_H_S $zas1, $w12, 0, $p0, $x0, $x1
+name: test2
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $zas0, $p0, $z0, $w12, $x0, $x1
+    $zas1 = SMECOPY_W $zas0, $z0, $p0, $w12
+    ST1_MXIPXX_H_S $zas1, $w12, 0, $p0, $x0, $x1
+...
+---
+# Do not forward if value is clobbered.
+# CHECK-LABEL: name: test3
+# CHECK:       ST1_MXIPXX_H_S renamable $zas0, $w12, 0, $p0, $x0, $x1
+name: test3
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $zas1, $p0, $p1, $z0, $w12, $x0, $x1
+    renamable $zas0 = SMECOPY_W $zas1, $z0, $p0, $w12
+    $zas1 = LD1_MXIPXX_H_S $zas1, $w12, 0, $p0, $x0, $x1
+    ST1_MXIPXX_H_S renamable $zas0, $w12, 0, $p0, $x0, $x1
+...
+---
+# Do not forward if value is clobbered via a subregister.
+# CHECK-LABEL: name: test4
+# CHECK:       ST1_MXIPXX_H_S renamable $zas0, $w12, 0, $p0, $x0, $x1
+name: test4
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $zas1, $p0, $p1, $z0, $w12, $x0, $x1
+    renamable $zas0 = SMECOPY_W $zas1, $z0, $p0, $w12
+    $zad5 = LD1_MXIPXX_H_D $zad5, $w12, 0, $p0, $x0, $x1
+    ST1_MXIPXX_H_S renamable $zas0, $w12, 0, $p0, $x0, $x1
+...

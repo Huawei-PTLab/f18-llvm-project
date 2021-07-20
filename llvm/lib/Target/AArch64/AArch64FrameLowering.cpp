@@ -3232,6 +3232,8 @@ static int64_t determineSMEStackObjectOffsets(MachineFrameInfo &MFI,
   for (int I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
     if (MFI.getStackID(I) != TargetStackID::ScalableMatrix)
       continue;
+    if (MFI.isDeadObjectIndex(I))
+      continue;
 
     ObjectsToAllocate.push_back(I);
   }

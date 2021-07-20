@@ -1020,6 +1020,8 @@ public:
     return 0;
   }
 
+  virtual bool isSMECopy(const MachineInstr &MI) const { return false; }
+
   /// If the specific machine instruction is an instruction that adds an
   /// immediate value and a physical register, and stores the result in
   /// the given physical register \c Reg, return a pair of the source
@@ -1907,6 +1909,14 @@ public:
                                             Register Dst) const {
     return BuildMI(MBB, InsPt, DL, get(TargetOpcode::COPY), Dst)
         .addReg(Src, 0, SrcSubReg);
+  }
+
+  /// Create a Copy instruction for SME Matrix.
+  virtual MachineInstr *createTileCopy(MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator InsPt,
+                                       const DebugLoc &DL, Register Src,
+                                       unsigned SrcSubReg, Register Dst) const {
+    return nullptr;
   }
 
   /// Returns a \p outliner::OutlinedFunction struct containing target-specific

@@ -320,6 +320,13 @@ public:
                                                   int64_t &ByteSized,
                                                   int64_t &VGSized);
 
+  MachineInstr *createTileCopy(MachineBasicBlock &MBB,
+                               MachineBasicBlock::iterator InsPt,
+                               const DebugLoc &DL, Register Src,
+                               unsigned SrcSubReg, Register Dst) const override;
+
+  bool isSMECopy(const MachineInstr &MI) const override;
+
   unsigned getSMECopyInstr(const MachineRegisterInfo &MRI,
                            unsigned Vreg) const override;
 

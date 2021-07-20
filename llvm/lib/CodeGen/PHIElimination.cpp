@@ -292,6 +292,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
   // into the phi node destination.
   MachineInstr *PHICopy = nullptr;
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   if (allPhiOperandsUndefined(*MPhi, *MRI))
     // If all sources of a PHI node are implicit_def or undef uses, just emit an
     // implicit_def instead of a copy.
@@ -313,8 +314,13 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
       entry = IncomingReg = MF.getRegInfo().createVirtualRegister(RC);
     }
     // Give the target possiblity to handle special cases fallthrough otherwise
-    PHICopy = TII->createPHIDestinationCopy(MBB, AfterPHIsIt, MPhi->getDebugLoc(),
-                                  IncomingReg, DestReg);
+    if (TRI->isSMERegisters(MF.getRegInfo().getRegClass(DestReg))) {
+      PHICopy = TII->createTileCopy(MBB, AfterPHIsIt, MPhi->getDebugLoc(),
+                                    IncomingReg, 0, DestReg);
+    } else {
+      PHICopy = TII->createPHIDestinationCopy(
+          MBB, AfterPHIsIt, MPhi->getDebugLoc(), IncomingReg, DestReg);
+    }
   }
 
   if (MPhi->peekDebugInstrNum()) {
@@ -501,8 +507,15 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
       } else {
         // Delete the debug location, since the copy is inserted into a
         // different basic block.
-        NewSrcInstr = TII->createPHISourceCopy(opBlock, InsertPos, nullptr,
-                                               SrcReg, SrcSubReg, IncomingReg);
+        if (TRI->isSMERegisters(MF.getRegInfo().getRegClass(SrcReg))) {
+          NewSrcInstr =
+              TII->createTileCopy(opBlock, InsertPos, nullptr,
+                                  SrcReg, SrcSubReg, IncomingReg);
+        } else {
+          NewSrcInstr =
+              TII->createPHISourceCopy(opBlock, InsertPos, nullptr,
+                                       SrcReg, SrcSubReg, IncomingReg);
+        }
       }
     }
 

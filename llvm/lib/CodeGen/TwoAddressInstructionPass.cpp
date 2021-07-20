@@ -1495,11 +1495,19 @@ TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
 #endif
 
     // Emit a copy.
-    MachineInstrBuilder MIB = BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-                                      TII->get(TargetOpcode::COPY), RegA);
+    MachineInstrBuilder MIB;
+    MachineInstr *SMI = nullptr;
+    if (TRI->isSMERegisters(MRI->getRegClass(RegB))) {
+      SMI = TII->createTileCopy(*MI->getParent(), MI, MI->getDebugLoc(), RegB,
+                                0, RegA);
+    } else {
+      MIB = BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+                    TII->get(TargetOpcode::COPY), RegA);
+      MIB.addReg(RegB, 0, SubRegB);
+    }
+
     // If this operand is folding a truncation, the truncation now moves to the
     // copy so that the register classes remain valid for the operands.
-    MIB.addReg(RegB, 0, SubRegB);
     const TargetRegisterClass *RC = MRI->getRegClass(RegB);
     if (SubRegB) {
       if (RegA.isVirtual()) {
@@ -1544,7 +1552,10 @@ TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
       }
     }
 
-    LLVM_DEBUG(dbgs() << "\t\tprepend:\t" << *MIB);
+    if (SMI != nullptr)
+      LLVM_DEBUG(dbgs() << "\t\tprepend:\t" << SMI);
+    else
+      LLVM_DEBUG(dbgs() << "\t\tprepend:\t" << *MIB);
 
     MachineOperand &MO = MI->getOperand(SrcIdx);
     assert(MO.isReg() && MO.getReg() == RegB && MO.isUse() &&

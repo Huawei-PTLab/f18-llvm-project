@@ -57,6 +57,7 @@
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -68,6 +69,7 @@ STATISTIC(NumCopiesRemoved, "Number of copies removed.");
 namespace {
 class AArch64RedundantCopyElimination : public MachineFunctionPass {
   const MachineRegisterInfo *MRI;
+  const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
 
   // DomBBClobberedRegs is used when computing known values in the dominating
@@ -320,7 +322,7 @@ bool AArch64RedundantCopyElimination::optimizeBlock(MachineBasicBlock *MBB) {
       if (FirstUse == PredI)
         SeenFirstUse = true;
 
-      if (PredI->isCopy()) {
+      if (PredI->isCopy() || TII->isSMECopy(*PredI)) {
         MCPhysReg CopyDstReg = PredI->getOperand(0).getReg();
         MCPhysReg CopySrcReg = PredI->getOperand(1).getReg();
         for (auto &KnownReg : KnownRegs) {
@@ -376,7 +378,7 @@ bool AArch64RedundantCopyElimination::optimizeBlock(MachineBasicBlock *MBB) {
     MachineInstr *MI = &*I;
     ++I;
     bool RemovedMI = false;
-    bool IsCopy = MI->isCopy();
+    bool IsCopy = MI->isCopy() || TII->isSMECopy(*MI);
     bool IsMoveImm = MI->isMoveImmediate();
     if (IsCopy || IsMoveImm) {
       Register DefReg = MI->getOperand(0).getReg();
@@ -476,6 +478,7 @@ bool AArch64RedundantCopyElimination::runOnMachineFunction(
     MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
+  TII = MF.getSubtarget().getInstrInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
   MRI = &MF.getRegInfo();
 

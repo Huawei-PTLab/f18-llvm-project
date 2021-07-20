@@ -150,9 +150,10 @@ public:
     }
   }
 
-  /// Add this copy's registers into the tracker's copy maps.
-  void trackCopy(MachineInstr *MI, const TargetRegisterInfo &TRI) {
-    assert(MI->isCopy() && "Tracking non-copy?");
+  /// Add this copy's registers into the trackea's copy maps.
+  void trackCopy(MachineInstr *MI, const TargetRegisterInfo &TRI,
+                 const TargetInstrInfo &TII) {
+    assert((MI->isCopy() || TII.isSMECopy(*MI)) && "Tracking non-copy?");
 
     MCRegister Def = MI->getOperand(0).getReg().asMCReg();
     MCRegister Src = MI->getOperand(1).getReg().asMCReg();
@@ -370,7 +371,7 @@ bool MachineCopyPropagation::eraseIfRedundant(MachineInstr &Copy,
 
   // Copy was redundantly redefining either Src or Def. Remove earlier kill
   // flags between Copy and PrevCopy because the value will be reused now.
-  assert(Copy.isCopy());
+  assert(Copy.isCopy() || TII->isSMECopy(Copy));
   Register CopyDef = Copy.getOperand(0).getReg();
   assert(CopyDef == Src || CopyDef == Def);
   for (MachineInstr &MI :
@@ -411,7 +412,7 @@ bool MachineCopyPropagation::isForwardableRegClassCopy(const MachineInstr &Copy,
           UseI.getRegClassConstraint(UseIdx, TII, TRI))
     return URC->contains(CopySrcReg);
 
-  if (!UseI.isCopy())
+  if (!(UseI.isCopy() || TII->isSMECopy(UseI)))
     return false;
 
   const TargetRegisterClass *CopySrcRC =
@@ -557,7 +558,8 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
     // Check that the instruction is not a copy that partially overwrites the
     // original copy source that we are about to use. The tracker mechanism
     // cannot cope with that.
-    if (MI.isCopy() && MI.modifiesRegister(CopySrcReg, TRI) &&
+    if ((MI.isCopy() || TII->isSMECopy(MI)) &&
+        MI.modifiesRegister(CopySrcReg, TRI) &&
         !MI.definesRegister(CopySrcReg)) {
       LLVM_DEBUG(dbgs() << "MCP: Copy source overlap with dest in " << MI);
       continue;
@@ -596,8 +598,9 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
 
   for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
     // Analyze copies (which don't overlap themselves).
-    if (MI.isCopy() && !TRI->regsOverlap(MI.getOperand(0).getReg(),
-                                         MI.getOperand(1).getReg())) {
+    if ((MI.isCopy() || TII->isSMECopy(MI)) &&
+        !TRI->regsOverlap(MI.getOperand(0).getReg(),
+                          MI.getOperand(1).getReg())) {
       assert(MI.getOperand(0).getReg().isPhysical() &&
              MI.getOperand(1).getReg().isPhysical() &&
              "MachineCopyPropagation should be run after register allocation!");
@@ -663,7 +666,7 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
         Tracker.clobberRegister(Reg, *TRI);
       }
 
-      Tracker.trackCopy(&MI, *TRI);
+      Tracker.trackCopy(&MI, *TRI, *TII);
 
       continue;
     }
@@ -752,7 +755,7 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
       assert(!MRI->isReserved(MaybeDead->getOperand(0).getReg()));
 
       // Update matching debug values, if any.
-      assert(MaybeDead->isCopy());
+      assert(MaybeDead->isCopy() || TII->isSMECopy(*MaybeDead));
       Register SrcReg = MaybeDead->getOperand(1).getReg();
       Register DestReg = MaybeDead->getOperand(0).getReg();
       SmallVector<MachineInstr *> MaybeDeadDbgUsers(
@@ -772,8 +775,9 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
 }
 
 static bool isBackwardPropagatableCopy(MachineInstr &MI,
-                                       const MachineRegisterInfo &MRI) {
-  assert(MI.isCopy() && "MI is expected to be a COPY");
+                                       const MachineRegisterInfo &MRI,
+                                       const TargetInstrInfo &TII) {
+  assert((MI.isCopy() || TII.isSMECopy(MI)) && "MI is expected to be a COPY");
   Register Def = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
 
@@ -849,7 +853,7 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
 
   for (MachineInstr &MI : llvm::make_early_inc_range(llvm::reverse(MBB))) {
     // Ignore non-trivial COPYs.
-    if (MI.isCopy() && MI.getNumOperands() == 2 &&
+    if ((MI.isCopy() || TII->isSMECopy(MI)) && MI.getNumOperands() == 2 &&
         !TRI->regsOverlap(MI.getOperand(0).getReg(),
                           MI.getOperand(1).getReg())) {
 
@@ -858,10 +862,10 @@ void MachineCopyPropagation::BackwardCopyPropagateBlock(
 
       // Unlike forward cp, we don't invoke propagateDefs here,
       // just let forward cp do COPY-to-COPY propagation.
-      if (isBackwardPropagatableCopy(MI, *MRI)) {
+      if (isBackwardPropagatableCopy(MI, *MRI, *TII)) {
         Tracker.invalidateRegister(Src, *TRI);
         Tracker.invalidateRegister(Def, *TRI);
-        Tracker.trackCopy(&MI, *TRI);
+        Tracker.trackCopy(&MI, *TRI, *TII);
         continue;
       }
     }
