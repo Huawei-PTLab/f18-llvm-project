@@ -101,7 +101,8 @@ private:
   bool expandSMEFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                    unsigned Opc, unsigned FIOpc);
   bool expandSMECOPY(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                     MachineBasicBlock::iterator &NextMBBI, unsigned Opc);
+                     MachineBasicBlock::iterator &NextMBBI, unsigned MovAtv,
+                     unsigned MovVta, unsigned Opc);
 };
 
 } // end anonymous namespace
@@ -955,6 +956,7 @@ bool AArch64ExpandPseudo::expandSMEFI(MachineBasicBlock &MBB,
 bool AArch64ExpandPseudo::expandSMECOPY(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MBBI,
                                         MachineBasicBlock::iterator &NextMBBI,
+                                        unsigned MovAtv, unsigned MovVta,
                                         unsigned Opc) {
   // The instruction is of the form:
   // za0d, ch= SMECOPY $za1d, $z1, $p0, $x12
@@ -990,14 +992,14 @@ bool AArch64ExpandPseudo::expandSMECOPY(MachineBasicBlock &MBB,
   MF->insert(++MBB.getIterator(), LoopBB);
   MF->insert(++LoopBB->getIterator(), DoneBB);
 
-  BuildMI(LoopBB, MI.getDebugLoc(), TII->get(AArch64::EXTRACT_ZPMXI_H_D))
+  BuildMI(LoopBB, MI.getDebugLoc(), TII->get(MovAtv))
       .addReg(MI.getOperand(2).getReg(), RegState::Define) // Za vector
       .addReg(MI.getOperand(3).getReg())                   // Pg
       .addReg(MI.getOperand(1).getReg())                   // Tile1
       .addReg(MI.getOperand(4).getReg())                   // Wv
       .addImm(0);                                          // Imm
 
-  BuildMI(LoopBB, MI.getDebugLoc(), TII->get(AArch64::INSERT_MXIPZ_H_D))
+  BuildMI(LoopBB, MI.getDebugLoc(), TII->get(MovVta))
       .addReg(MI.getOperand(0).getReg(), RegState::Define) // Tile0
       .addReg(MI.getOperand(0).getReg())                   // Tile0
       .addReg(MI.getOperand(4).getReg())                   // Wv
@@ -1697,13 +1699,17 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      return expandSMEFI(MBB, MBBI, AArch64::CNTD_XPiI,
                         AArch64::SME_FI_Q);
    case AArch64::SMECOPY_B:
-     return expandSMECOPY(MBB, MBBI, NextMBBI, AArch64::CNTB_XPiI);
+     return expandSMECOPY(MBB, MBBI, NextMBBI, AArch64::EXTRACT_ZPMXI_H_B,
+                          AArch64::INSERT_MXIPZ_H_B, AArch64::CNTB_XPiI);
    case AArch64::SMECOPY_H:
-     return expandSMECOPY(MBB, MBBI, NextMBBI, AArch64::CNTH_XPiI);
+     return expandSMECOPY(MBB, MBBI, NextMBBI, AArch64::EXTRACT_ZPMXI_H_H,
+                          AArch64::INSERT_MXIPZ_H_H, AArch64::CNTH_XPiI);
    case AArch64::SMECOPY_W:
-     return expandSMECOPY(MBB, MBBI, NextMBBI, AArch64::CNTW_XPiI);
+     return expandSMECOPY(MBB, MBBI, NextMBBI, AArch64::EXTRACT_ZPMXI_H_S,
+                          AArch64::INSERT_MXIPZ_H_S, AArch64::CNTW_XPiI);
    case AArch64::SMECOPY_D:
-     return expandSMECOPY(MBB, MBBI, NextMBBI, AArch64::CNTD_XPiI);
+     return expandSMECOPY(MBB, MBBI, NextMBBI, AArch64::EXTRACT_ZPMXI_H_D,
+                          AArch64::INSERT_MXIPZ_H_D, AArch64::CNTD_XPiI);
   }
   return false;
 }
