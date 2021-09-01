@@ -437,7 +437,8 @@ public:
   void apply(PBQPRAGraph &G) override {
     MachineFunction &MF = G.getMetadata().MF;
     MachineBlockFrequencyInfo &MBFI = G.getMetadata().MBFI;
-    CoalescerPair CP(*MF.getSubtarget().getRegisterInfo());
+    CoalescerPair CP(*MF.getSubtarget().getRegisterInfo(),
+                     *MF.getSubtarget().getInstrInfo());
 
     // Scan the machine function and add a coalescing cost whenever CoalescerPair
     // gives the Ok.

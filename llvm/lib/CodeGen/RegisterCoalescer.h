@@ -21,12 +21,15 @@ namespace llvm {
 class MachineInstr;
 class TargetRegisterClass;
 class TargetRegisterInfo;
+class TargetInstrInfo;
 
   /// A helper class for register coalescers. When deciding if
   /// two registers can be coalesced, CoalescerPair can determine if a copy
   /// instruction would become an identity copy after coalescing.
   class CoalescerPair {
     const TargetRegisterInfo &TRI;
+
+    const TargetInstrInfo &TII;
 
     /// The register that will be left after coalescing. It can be a
     /// virtual or physical register.
@@ -57,13 +60,14 @@ class TargetRegisterInfo;
     const TargetRegisterClass *NewRC = nullptr;
 
   public:
-    CoalescerPair(const TargetRegisterInfo &tri) : TRI(tri) {}
+    CoalescerPair(const TargetRegisterInfo &tri, const TargetInstrInfo &tii)
+        : TRI(tri), TII(tii) {}
 
     /// Create a CoalescerPair representing a virtreg-to-physreg copy.
     /// No need to call setRegisters().
     CoalescerPair(Register VirtReg, MCRegister PhysReg,
-                  const TargetRegisterInfo &tri)
-        : TRI(tri), DstReg(PhysReg), SrcReg(VirtReg) {}
+                  const TargetRegisterInfo &tri, const TargetInstrInfo &tii)
+        : TRI(tri), TII(tii), DstReg(PhysReg), SrcReg(VirtReg) {}
 
     /// Set registers to match the copy instruction MI. Return
     /// false if MI is not a coalescable copy instruction.

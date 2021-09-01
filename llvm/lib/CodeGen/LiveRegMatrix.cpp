@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/LiveIntervalUnion.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
@@ -54,6 +55,7 @@ void LiveRegMatrix::getAnalysisUsage(AnalysisUsage &AU) const {
 
 bool LiveRegMatrix::runOnMachineFunction(MachineFunction &MF) {
   TRI = MF.getSubtarget().getRegisterInfo();
+  TII = MF.getSubtarget().getInstrInfo();
   LIS = &getAnalysis<LiveIntervals>();
   VRM = &getAnalysis<VirtRegMap>();
 
@@ -165,7 +167,7 @@ bool LiveRegMatrix::checkRegUnitInterference(LiveInterval &VirtReg,
                                              MCRegister PhysReg) {
   if (VirtReg.empty())
     return false;
-  CoalescerPair CP(VirtReg.reg(), PhysReg, *TRI);
+  CoalescerPair CP(VirtReg.reg(), PhysReg, *TRI, *TII);
 
   bool Result = foreachUnit(TRI, VirtReg, PhysReg, [&](unsigned Unit,
                                                        const LiveRange &Range) {

@@ -39,6 +39,7 @@ class VirtRegMap;
 
 class LiveRegMatrix : public MachineFunctionPass {
   const TargetRegisterInfo *TRI;
+  const TargetInstrInfo *TII;
   LiveIntervals *LIS;
   VirtRegMap *VRM;
 
