@@ -4156,10 +4156,12 @@ static void emitSMEFrameOffsetAdj(MachineBasicBlock &MBB,
   case AArch64::SME_FI_H:
   case AArch64::SME_FI_W:
   case AArch64::SME_FI_D:
-  case AArch64::SME_ADDVL_B:
-  case AArch64::SME_ADDVL_H:
-  case AArch64::SME_ADDVL_W:
-  case AArch64::SME_ADDVL_D:
+  case AArch64::SME_FI_Q:
+  case AArch64::SME_ALLOCA_B:
+  case AArch64::SME_ALLOCA_H:
+  case AArch64::SME_ALLOCA_W:
+  case AArch64::SME_ALLOCA_D:
+  case AArch64::SME_ALLOCA_Q:
     MaxEncoding = 31;
     ShiftSize = 0;
     if (Offset < 0) {
@@ -4194,7 +4196,8 @@ static void emitSMEFrameOffsetAdj(MachineBasicBlock &MBB,
     auto MBI = BuildMI(MBB, MBBI, DL, TII->get(Opc), TmpReg);
 
     if (Opc == AArch64::SME_FI_B || Opc == AArch64::SME_FI_H ||
-        Opc == AArch64::SME_FI_W || Opc == AArch64::SME_FI_D) {
+        Opc == AArch64::SME_FI_W || Opc == AArch64::SME_FI_D ||
+        Opc == AArch64::SME_FI_Q) {
       MBI = MBI.addReg(MBB.getParent()->getRegInfo().createVirtualRegister(
                            &AArch64::GPR64RegClass),
                        RegState::Define);
@@ -4202,8 +4205,9 @@ static void emitSMEFrameOffsetAdj(MachineBasicBlock &MBB,
                            &AArch64::GPR64RegClass),
                        RegState::Define);
       MBI = MBI.addReg(SrcReg);
-    } else if (Opc == AArch64::SME_ADDVL_B || Opc == AArch64::SME_ADDVL_H ||
-               Opc == AArch64::SME_ADDVL_W || Opc == AArch64::SME_ADDVL_D) {
+    } else if (Opc == AArch64::SME_ALLOCA_B || Opc == AArch64::SME_ALLOCA_H ||
+               Opc == AArch64::SME_ALLOCA_W || Opc == AArch64::SME_ALLOCA_D ||
+               Opc == AArch64::SME_ALLOCA_Q) {
       MBI = MBI.addReg(MBB.getParent()->getRegInfo().createVirtualRegister(
                            &AArch64::GPR64RegClass),
                        RegState::Define);
@@ -4235,7 +4239,7 @@ void llvm::emitSMEFrameOffset(MachineBasicBlock &MBB,
 
   // If method is called for eliminating frameindex then insert SME_FI
   // based on the type of spill/fill instruction.
-  // Else insert SME_ADDVL for the prolog and epilog.
+  // Else insert SME_ALLOCA for the prolog and epilog.
   if (IsEliminateFI) {
     size = 16;
     switch (MBBI->getOpcode()) {
@@ -4265,16 +4269,24 @@ void llvm::emitSMEFrameOffset(MachineBasicBlock &MBB,
     case AArch64::ST1V_ZaXI_D:
       ScalableOpc = AArch64::SME_FI_D;
       break;
+    case AArch64::LD1H_ZaXI_Q:
+    case AArch64::LD1V_ZaXI_Q:
+    case AArch64::ST1H_ZaXI_Q:
+    case AArch64::ST1V_ZaXI_Q:
+      ScalableOpc = AArch64::SME_FI_Q;
+      break;
     }
   } else {
+    if (size == 16)
+      ScalableOpc = AArch64::SME_ALLOCA_Q;
     if (size == 32)
-      ScalableOpc = AArch64::SME_ADDVL_D;
+      ScalableOpc = AArch64::SME_ALLOCA_D;
     if (size == 64)
-      ScalableOpc = AArch64::SME_ADDVL_W;
+      ScalableOpc = AArch64::SME_ALLOCA_W;
     if (size == 128)
-      ScalableOpc = AArch64::SME_ADDVL_H;
+      ScalableOpc = AArch64::SME_ALLOCA_H;
     if (size == 256)
-      ScalableOpc = AArch64::SME_ADDVL_B;
+      ScalableOpc = AArch64::SME_ALLOCA_B;
   }
 
   // Compute the number of matrices based on the size of the SME tile.

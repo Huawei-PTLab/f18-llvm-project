@@ -540,24 +540,26 @@ defm ST1V_ZaXI : SMEPseudoStore<TileVectorOpV8, TileVectorOpV16, TileVectorOpV32
 
 // Pseudo instruction for prologue and epilogue generation of stack frame allocation
 // for SME tiles.
-multiclass PseudoAddVL{
+multiclass SMEPseudoAlloca{
   def _B : Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm), (ins GPR64sp:$Rn, simm6_32b:$imm6), []>, Sched<[]>;
   def _H : Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm), (ins GPR64sp:$Rn, simm6_32b:$imm6), []>, Sched<[]>;
   def _W : Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm), (ins GPR64sp:$Rn, simm6_32b:$imm6), []>, Sched<[]>;
   def _D : Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm), (ins GPR64sp:$Rn, simm6_32b:$imm6), []>, Sched<[]>;
+  def _Q : Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm), (ins GPR64sp:$Rn, simm6_32b:$imm6), []>, Sched<[]>;
 }
 
-defm SME_ADDVL : PseudoAddVL;
+defm SME_ALLOCA : SMEPseudoAlloca;
 
 // Pseudo instruction for frame index.
-multiclass PseudoFrameIndex{
+multiclass SMEPseudoFrameIndex{
   def _B : Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm, GPR64:$Rs), (ins GPR64sp:$Rn), []>, Sched<[]>;
   def _H : Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm, GPR64:$Rs), (ins GPR64sp:$Rn), []>, Sched<[]>;
   def _W : Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm, GPR64:$Rs), (ins GPR64sp:$Rn), []>, Sched<[]>;
   def _D : Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm, GPR64:$Rs), (ins GPR64sp:$Rn), []>, Sched<[]>;
+  def _Q : Pseudo<(outs GPR64sp:$Rd, GPR64:$Rm, GPR64:$Rs), (ins GPR64sp:$Rn), []>, Sched<[]>;
 }
 
-defm SME_FI : PseudoFrameIndex;
+defm SME_FI : SMEPseudoFrameIndex;
 
 //===----------------------------------------------------------------------===//
 // Move instructions

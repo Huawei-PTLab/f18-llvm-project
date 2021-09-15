@@ -95,9 +95,9 @@ private:
                           unsigned PtrueOpc, unsigned CntOpc);
   bool expandSMEStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                       MachineBasicBlock::iterator &NextMBBI, unsigned Opc,
-                      unsigned CntOpc);
+                      unsigned CntOpc, unsigned AllocaOpc);
   bool expandSMEFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                   unsigned Opc);
+                   unsigned Opc, unsigned FIOpc);
 };
 
 } // end anonymous namespace
@@ -817,11 +817,12 @@ bool AArch64ExpandPseudo::expandStoreSwiftAsyncContext(
   return true;
 }
 
-// Pseudo instruction SME_ADDVL expansion for the prologue and epilogue.
+// Pseudo instruction SME_ALLOCA expansion for the prologue and epilogue.
 bool AArch64ExpandPseudo::expandSMEStack(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator MBBI,
                                          MachineBasicBlock::iterator &NextMBBI,
-                                         unsigned Opc, unsigned CntOpc) {
+                                         unsigned Opc, unsigned CntOpc,
+                                         unsigned AllocaOpc) {
   // The instruction in the MBB will be of this form.
   // $sp, dead $xn = frame-setup SME_ADDVL $spsrc, imm
   // It will be converted into the sequence of following instructions.
@@ -830,11 +831,22 @@ bool AArch64ExpandPseudo::expandSMEStack(MachineBasicBlock &MBB,
   //     addvl sp, spsrc, imm
   //     sub xn, xn, 1
   //     cbz xn, L1
+  //
+  // As there is no support for CNT instruction for Q type, for SME_ALLOCA_Q,
+  // we use CNTD with ASR instruction to shift the value of CNT to obtain
+  // correct count value.
+  // The sequence will become.
+  //     cntd $xn
+  //     asr $xn, $xn, #1
+  // L1:
+  //     addvl sp, spsrc, imm
+  //     sub xn, xn, #1
+  //     cbz xn, L1
   MachineInstr &MI = *MBBI;
   unsigned Spdst = MI.getOperand(0).getReg();
   unsigned Xn = MI.getOperand(1).getReg();
   unsigned Spsrc = MI.getOperand(2).getReg();
-  unsigned Imm = MI.getOperand(3).getImm();
+  auto Imm = MI.getOperand(3).getImm();
 
   MachineFunction *MF = MBB.getParent();
   auto LoopBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
@@ -844,6 +856,13 @@ bool AArch64ExpandPseudo::expandSMEStack(MachineBasicBlock &MBB,
       .addReg(Xn)
       .addImm(31)
       .addImm(1);
+
+  if (AllocaOpc == AArch64::SME_ALLOCA_Q)
+    BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::SBFMXri))
+        .addReg(Xn)
+        .addReg(Xn)
+        .addImm(1)
+        .addImm(63);
 
   MF->insert(++MBB.getIterator(), LoopBB);
   MF->insert(++LoopBB->getIterator(), DoneBB);
@@ -879,12 +898,20 @@ bool AArch64ExpandPseudo::expandSMEStack(MachineBasicBlock &MBB,
 // Expanding the pseudo instruction for the frame index of SME tiles.
 bool AArch64ExpandPseudo::expandSMEFI(MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator MBBI,
-                                      unsigned Opc) {
+                                      unsigned Opc, unsigned FIOpc) {
   // The incoming frame index instruction will be like below.
   // $x8, $x9, $x10 = SME_FI $x8
   //
   // This will converted to the following sequence.
   // cnt(type) $x9
+  // cntb $x10
+  // madd $x8, $x9, $x10, $x8
+  //
+  // For SME_FI_Q, as there is no support CNT instruction for Qtype, using
+  // CNTD instruction with ASR to shift the value and obtain correct CNT value.
+  // So for SME_FI_Q the sequence is:
+  // cntd $x9
+  // asr x9, x9, #1
   // cntb $x10
   // madd $x8, $x9, $x10, $x8
   MachineInstr &MI = *MBBI;
@@ -897,6 +924,13 @@ bool AArch64ExpandPseudo::expandSMEFI(MachineBasicBlock &MBB,
       .addReg(Xm, RegState::Define)
       .addImm(31)
       .addImm(1);
+
+  if (FIOpc == AArch64::SME_FI_Q)
+    BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::SBFMXri))
+        .addReg(Xm, RegState::Define)
+        .addReg(Xm)
+        .addImm(1)
+        .addImm(63);
 
   BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::CNTB_XPiI))
       .addReg(Xs, RegState::Define)
@@ -1552,26 +1586,36 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
    case AArch64::ST1V_ZaXI_Q:
      return expandSMESpillFill(MBB, MBBI, NextMBBI, AArch64::ST1_MXIPXX_V_Q,
                                AArch64::PTRUE_D, AArch64::CNTD_XPiI);
-   case AArch64::SME_ADDVL_B:
+   case AArch64::SME_ALLOCA_B:
      return expandSMEStack(MBB, MBBI, NextMBBI, AArch64::ADDVL_XXI,
-                           AArch64::CNTB_XPiI);
-   case AArch64::SME_ADDVL_H:
+                           AArch64::CNTB_XPiI, AArch64::SME_ALLOCA_B);
+   case AArch64::SME_ALLOCA_H:
      return expandSMEStack(MBB, MBBI, NextMBBI, AArch64::ADDVL_XXI,
-                           AArch64::CNTH_XPiI);
-   case AArch64::SME_ADDVL_W:
+                           AArch64::CNTH_XPiI, AArch64::SME_ALLOCA_H);
+   case AArch64::SME_ALLOCA_W:
      return expandSMEStack(MBB, MBBI, NextMBBI, AArch64::ADDVL_XXI,
-                           AArch64::CNTW_XPiI);
-   case AArch64::SME_ADDVL_D:
+                           AArch64::CNTW_XPiI, AArch64::SME_ALLOCA_W);
+   case AArch64::SME_ALLOCA_D:
      return expandSMEStack(MBB, MBBI, NextMBBI, AArch64::ADDVL_XXI,
-                           AArch64::CNTD_XPiI);
+                           AArch64::CNTD_XPiI, AArch64::SME_ALLOCA_D);
+   case AArch64::SME_ALLOCA_Q:
+     return expandSMEStack(MBB, MBBI, NextMBBI, AArch64::ADDVL_XXI,
+                           AArch64::CNTD_XPiI, AArch64::SME_ALLOCA_Q);
    case AArch64::SME_FI_B:
-     return expandSMEFI(MBB, MBBI, AArch64::CNTB_XPiI);
+     return expandSMEFI(MBB, MBBI, AArch64::CNTB_XPiI,
+                        AArch64::SME_FI_B);
    case AArch64::SME_FI_H:
-     return expandSMEFI(MBB, MBBI, AArch64::CNTH_XPiI);
+     return expandSMEFI(MBB, MBBI, AArch64::CNTH_XPiI,
+                        AArch64::SME_FI_H);
    case AArch64::SME_FI_W:
-     return expandSMEFI(MBB, MBBI, AArch64::CNTW_XPiI);
+     return expandSMEFI(MBB, MBBI, AArch64::CNTW_XPiI,
+                        AArch64::SME_FI_W);
    case AArch64::SME_FI_D:
-     return expandSMEFI(MBB, MBBI, AArch64::CNTD_XPiI);
+     return expandSMEFI(MBB, MBBI, AArch64::CNTD_XPiI,
+                        AArch64::SME_FI_D);
+   case AArch64::SME_FI_Q:
+     return expandSMEFI(MBB, MBBI, AArch64::CNTD_XPiI,
+                        AArch64::SME_FI_Q);
   }
   return false;
 }
