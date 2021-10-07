@@ -4321,7 +4321,8 @@ unsigned emitSMEFrameIndex(MachineInstr &MI, unsigned FrameReg,
 
   for (int StackObj = MFI.getObjectIndexBegin();
        StackObj < MFI.getObjectIndexEnd(); StackObj++) {
-    if (MFI.getObjectOffset(StackObj) < Offset.getDoublyScalable())
+    if (MFI.getObjectOffset(StackObj) < Offset.getDoublyScalable() &&
+        (MFI.getStackID(StackObj) == TargetStackID::ScalableMatrix))
       OffsetTiles.push_back(StackObj);
   }
 
