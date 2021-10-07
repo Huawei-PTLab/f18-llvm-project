@@ -824,7 +824,7 @@ bool AArch64ExpandPseudo::expandSMEStack(MachineBasicBlock &MBB,
                                          unsigned Opc, unsigned CntOpc,
                                          unsigned AllocaOpc) {
   // The instruction in the MBB will be of this form.
-  // $sp, dead $xn = frame-setup SME_ADDVL $spsrc, imm
+  // $sp, dead $xn = frame-setup SME_ALLOCA $spsrc, imm
   // It will be converted into the sequence of following instructions.
   //     cnt(type) $xn
   // L1:
@@ -900,12 +900,12 @@ bool AArch64ExpandPseudo::expandSMEFI(MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator MBBI,
                                       unsigned Opc, unsigned FIOpc) {
   // The incoming frame index instruction will be like below.
-  // $x8, $x9, $x10 = SME_FI $x8
+  // $x8, $x9, $x10 = SME_FI $bp
   //
   // This will converted to the following sequence.
   // cnt(type) $x9
   // cntb $x10
-  // madd $x8, $x9, $x10, $x8
+  // madd $x8, $x9, $x10, $bp
   //
   // For SME_FI_Q, as there is no support CNT instruction for Qtype, using
   // CNTD instruction with ASR to shift the value and obtain correct CNT value.
@@ -913,12 +913,12 @@ bool AArch64ExpandPseudo::expandSMEFI(MachineBasicBlock &MBB,
   // cntd $x9
   // asr x9, x9, #1
   // cntb $x10
-  // madd $x8, $x9, $x10, $x8
+  // madd $x8, $x9, $x10, $bp
   MachineInstr &MI = *MBBI;
   unsigned Xn = MI.getOperand(0).getReg();
   unsigned Xm = MI.getOperand(1).getReg();
   unsigned Xs = MI.getOperand(2).getReg();
-  unsigned Xnsrc = MI.getOperand(3).getReg();
+  unsigned BP = MI.getOperand(3).getReg();
 
   BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc))
       .addReg(Xm, RegState::Define)
@@ -941,7 +941,7 @@ bool AArch64ExpandPseudo::expandSMEFI(MachineBasicBlock &MBB,
       .addReg(Xn, RegState::Define)
       .addReg(Xm)
       .addReg(Xs)
-      .addReg(Xnsrc);
+      .addReg(BP);
 
   MI.eraseFromParent();
   return true;

@@ -157,7 +157,8 @@ private:
                                       int &MaxCSFrameIndex) const;
 
   int64_t estimateSMEStackObjectOffsets(MachineFrameInfo &MFI) const;
-  int64_t assignSMEStackObjectOffsets(MachineFrameInfo &MFI) const;
+  int64_t assignSMEStackObjectOffsets(MachineFrameInfo &MFI,
+                                      int64_t SVEStackSize) const;
   MCCFIInstruction
   createDefCFAExpressionFromSP(const TargetRegisterInfo &TRI,
                                const StackOffset &OffsetFromSP) const;

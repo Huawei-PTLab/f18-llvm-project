@@ -15,14 +15,17 @@ define void @fill_mxv4i64() {
 ; CHECK-NEXT: cntd    {{x[0-9]+}}
 ; CHECK-NEXT: cntb    {{x[0-9]+}}
 ; CHECK-NEXT: madd    {{x[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}, sp
+; CHECK-NEXT: cntd    {{x[0-9]+}}
+; CHECK-NEXT: cntb    {{x[0-9]+}}
 ; CHECK-NEXT: ptrue   p0.d
+; CHECK-NEXT: madd    {{x[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}
 ; CHECK-NEXT: cntd    {{x[0-9]+}}
 ; CHECK-NEXT: mul     {{x[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}
 ; CHECK-NEXT: mov     x12, {{x[0-9]+}}
 ; CHECK-NEXT: {{.LBB[0-9]+_[0-9]+}}:
 ; CHECK-NEXT: sub     x12, x12, #1
 ; CHECK-NEXT: sub     {{x[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}
-; CHECK-NEXT: ld1d    { za0h.d[w12] }, p0/z, [x8, x8, lsl #3]
+; CHECK-NEXT: ld1d    {za0h.d[w12, 0]}, p0/z, [x8, x8, lsl #3]
 ; CHECK-NEXT: cbz     x12, {{.LBB[0-9]+_[0-9]+}}
 ; CHECK-NEXT: cntd    {{x[0-9]+}}
 ; CHECK-NEXT: cntb    {{x[0-9]+}}
@@ -34,17 +37,16 @@ define void @fill_mxv4i64() {
 ; CHECK-NEXT: {{.LBB[0-9]+_[0-9]+}}:
 ; CHECK-NEXT: sub     x12, x12, #1
 ; CHECK-NEXT: sub     {{x[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}
-; CHECK-NEXT: ld1d    { za0h.d[w12] }, p0/z, [x8, x8, lsl #3]
+; CHECK-NEXT: ld1d    {za0h.d[w12, 0]}, p0/z, [x8, x8, lsl #3]
 ; CHECK-NEXT: cbz     x12, {{.LBB[0-9]+_[0-9]+}}
-; CHECK-NEXT: mov     {{x[0-9]+}}, sp
-; CHECK-NEXT: ptrue   p0.d
 ; CHECK-NEXT: cntd    {{x[0-9]+}}
+; CHECK-NEXT: ptrue   p0.d
 ; CHECK-NEXT: mul     {{x[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}
 ; CHECK-NEXT: mov     x12, {{x[0-9]+}}
 ; CHECK-NEXT: {{.LBB[0-9]+_[0-9]+}}:
 ; CHECK-NEXT: sub     x12, x12, #1
 ; CHECK-NEXT: sub     {{x[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}
-; CHECK-NEXT: ld1d    { za0h.d[w12] }, p0/z, [x8, x8, lsl #3]
+; CHECK-NEXT: ld1d    {za0h.d[w12, 0]}, p0/z, [sp, x8, lsl #3]
 ; CHECK-NEXT: cbz     x12, {{.LBB[0-9]+_[0-9]+}}
 ; CHECK-NEXT: cntd   {{x[0-9]+}}
 ; CHECK-NEXT: {{.LBB[0-9]+_[0-9]+}}:
@@ -84,17 +86,16 @@ define void @spill_mxv4i64(<mscale x 4 x i64> %v0, <mscale x 4 x i64> %v1) {
 ; CHECK-NEXT: {{.LBB[0-9]+_[0-9]+}}:
 ; CHECK-NEXT: sub     x12, x12, #1
 ; CHECK-NEXT: sub     {{x[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}
-; CHECK-NEXT: st1d    { za0h.d[w12] }, p0, [x8, x8, lsl #3]
+; CHECK-NEXT: st1d    {za0h.d[w12, 0]}, p0, [x8, x8, lsl #3]
 ; CHECK-NEXT: cbz     x12, {{.LBB[0-9]+_[0-9]+}}
-; CHECK-NEXT: mov     {{x[0-9]+}}, sp
-; CHECK-NEXT: ptrue   p0.d
 ; CHECK-NEXT: cntd    {{x[0-9]+}}
+; CHECK-NEXT: ptrue   p0.d
 ; CHECK-NEXT: mul     {{x[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}
 ; CHECK-NEXT: mov     x12, {{x[0-9]+}}
 ; CHECK-NEXT: {{.LBB[0-9]+_[0-9]+}}:
 ; CHECK-NEXT: sub     x12, x12, #1
 ; CHECK-NEXT: sub     {{x[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}
-; CHECK-NEXT: st1d    { za1h.d[w12] }, p0, [x8, x8, lsl #3]
+; CHECK-NEXT: st1d    {za1h.d[w12, 0]}, p0, [sp, x8, lsl #3]
 ; CHECK-NEXT: cbz     x12, {{.LBB[0-9]+_[0-9]+}}
 ; CHECK-NEXT: cntd   {{x[0-9]+}}
 ; CHECK-NEXT: {{.LBB[0-9]+_[0-9]+}}:
@@ -132,17 +133,16 @@ define void @spillfill_mxv4i64(<mscale x 4 x i64> %v0) {
 ; CHECK-NEXT: {{.LBB[0-9]+_[0-9]+}}:
 ; CHECK-NEXT: sub     x12, x12, #1
 ; CHECK-NEXT: sub     {{x[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}
-; CHECK-NEXT: st1d    { za0h.d[w12] }, p0, [x8, x8, lsl #3]
+; CHECK-NEXT: st1d    {za0h.d[w12, 0]}, p0, [x8, x8, lsl #3]
 ; CHECK-NEXT: cbz     x12, {{.LBB[0-9]+_[0-9]+}}
-; CHECK-NEXT: mov     {{x[0-9]+}}, sp
-; CHECK-NEXT: ptrue   p0.d
 ; CHECK-NEXT: cntd    {{x[0-9]+}}
+; CHECK-NEXT: ptrue   p0.d
 ; CHECK-NEXT: mul     {{x[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}
 ; CHECK-NEXT: mov     x12, {{x[0-9]+}}
 ; CHECK-NEXT: {{.LBB[0-9]+_[0-9]+}}:
 ; CHECK-NEXT: sub     x12, x12, #1
 ; CHECK-NEXT: sub     {{x[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}
-; CHECK-NEXT: ld1d    { za0h.d[w12] }, p0/z, [x8, x8, lsl #3]
+; CHECK-NEXT: ld1d    {za0h.d[w12, 0]}, p0/z, [sp, x8, lsl #3]
 ; CHECK-NEXT: cbz     x12, {{.LBB[0-9]+_[0-9]+}}
 ; CHECK-NEXT: cntd   {{x[0-9]+}}
 ; CHECK-NEXT: {{.LBB[0-9]+_[0-9]+}}:
@@ -164,36 +164,34 @@ define void @fillsve(<vscale x 2 x i64> %v0, <mscale x 4 x i64> %v1) {
 ; CHECK-LABEL: fillsve
 ; CHECK-DAG: .cfi_startproc
 ; CHECK-NEXT: str     x29, [sp, #-16]!
+; CHECK-NEXT: mov     x29, sp
 ; CHECK-NEXT: addvl   sp, sp, #-1
-; CHECK-NEXT: cntd   {{x[0-9]+}}
+; CHECK-NEXT: cntd    {{x[0-9]+}}
 ; CHECK-NEXT: {{.LBB[0-9]+_[0-9]+}}:
 ; CHECK-NEXT: addvl   sp, sp, #-1
 ; CHECK-NEXT: sub     x8, x8, #1
 ; CHECK-NEXT: cbz     x8, {{.LBB[0-9]+_[0-9]+}}
-; CHECK-DAG: ptrue   p0.d
-; CHECK-NEXT: st1d    { z0.d }, p0, [sp]
-; CHECK-NEXT: ld1d    { z0.d }, p0/z, [sp]
+; CHECK-DAG:  .cfi_offset w29, -16
 ; CHECK-NEXT: cntd    {{x[0-9]+}}
-; CHECK-NEXT: cntb    {{x[0-9]+}}
-; CHECK-NEXT: madd    {{x[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}, sp
-; CHECK-NEXT: ptrue   p0.d
-; CHECK-NEXT: cntd    {{x[0-9]+}}
+; CHECK-DAG:  ptrue   p0.d
 ; CHECK-NEXT: mul     {{x[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}
+; CHECK-NEXT: st1d    { z0.d }, p0, [x29, #-1, mul vl]
+; CHECK-NEXT: ld1d    { z0.d }, p0/z, [x29, #-1, mul vl]
+; CHECK-NEXT: ptrue   p0.d
 ; CHECK-NEXT: mov     x12, {{x[0-9]+}}
 ; CHECK-NEXT: {{.LBB[0-9]+_[0-9]+}}:
 ; CHECK-NEXT: sub     x12, x12, #1
 ; CHECK-NEXT: sub     {{x[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}
-; CHECK-NEXT: st1d    { za0h.d[w12] }, p0, [x8, x8, lsl #3]
+; CHECK-NEXT: st1d    {za0h.d[w12, 0]}, p0, [x19, x8, lsl #3]
 ; CHECK-NEXT: cbz     x12, {{.LBB[0-9]+_[0-9]+}}
-; CHECK-DAG:  madd    {{x[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}, sp
-; CHECK-NEXT: ptrue   p0.d
 ; CHECK-NEXT: cntd    {{x[0-9]+}}
+; CHECK-NEXT: ptrue   p0.d
 ; CHECK-NEXT: mul     {{x[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}
 ; CHECK-NEXT: mov     x12, {{x[0-9]+}}
 ; CHECK-NEXT: {{.LBB[0-9]+_[0-9]+}}:
 ; CHECK-NEXT: sub     x12, x12, #1
 ; CHECK-NEXT: sub     {{x[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}
-; CHECK-NEXT: ld1d    { za0h.d[w12] }, p0/z, [x8, x8, lsl #3]
+; CHECK-NEXT: ld1d    {za0h.d[w12, 0]}, p0/z, [x19, x8, lsl #3]
 ; CHECK-NEXT: cbz     x12, {{.LBB[0-9]+_[0-9]+}}
 ; CHECK-NEXT: addvl   sp, sp, #1
 ; CHECK-NEXT: cntd   {{x[0-9]+}}

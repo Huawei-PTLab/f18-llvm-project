@@ -4291,7 +4291,7 @@ void llvm::emitSMEFrameOffset(MachineBasicBlock &MBB,
 
   // Compute the number of matrices based on the size of the SME tile.
   Bytes = Offset.getFixed();
-  NumMatrices = Offset.getScalable() / size;
+  NumMatrices = Offset.getDoublyScalable() / size;
 
   if (Bytes || (!Offset && SrcReg != DestReg)) {
     assert((DestReg != AArch64::SP || Bytes % 8 == 0) &&
@@ -4311,6 +4311,51 @@ void llvm::emitSMEFrameOffset(MachineBasicBlock &MBB,
                           ScalableOpc, TII, Flag);
     SrcReg = DestReg;
   }
+}
+
+unsigned emitSMEFrameIndex(MachineInstr &MI, unsigned FrameReg,
+                           StackOffset &Offset, const AArch64InstrInfo *TII) {
+  const MachineFrameInfo &MFI = MI.getParent()->getParent()->getFrameInfo();
+  std::vector<int> OffsetTiles;
+  unsigned ScalableOpc;
+
+  for (int StackObj = MFI.getObjectIndexBegin();
+       StackObj < MFI.getObjectIndexEnd(); StackObj++) {
+    if (MFI.getObjectOffset(StackObj) < Offset.getDoublyScalable())
+      OffsetTiles.push_back(StackObj);
+  }
+
+  Register TempReg;
+  for (auto Obj : OffsetTiles) {
+    switch (MFI.getObjectSize(Obj)) {
+    default:
+      llvm_unreachable("Unknown opcode");
+    case 16:
+      ScalableOpc = AArch64::SME_FI_Q;
+      break;
+    case 32:
+      ScalableOpc = AArch64::SME_FI_D;
+      break;
+    case 64:
+      ScalableOpc = AArch64::SME_FI_W;
+      break;
+    case 128:
+      ScalableOpc = AArch64::SME_FI_H;
+      break;
+    case 256:
+      ScalableOpc = AArch64::SME_FI_B;
+      break;
+    }
+
+    TempReg = MI.getParent()->getParent()->getRegInfo().createVirtualRegister(
+        &AArch64::GPR64RegClass);
+    emitSMEFrameOffsetAdj(*MI.getParent(), MI, MI.getDebugLoc(), TempReg,
+                          FrameReg,
+                          Offset.getDoublyScalable() / MFI.getObjectSize(Obj),
+                          ScalableOpc, TII, MachineInstr::NoFlags);
+    FrameReg = TempReg;
+  }
+  return FrameReg;
 }
 
 MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
@@ -4624,6 +4669,20 @@ bool llvm::rewriteAArch64FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
                     MI.getOperand(0).getReg(), FrameReg, Offset, TII,
                     MachineInstr::NoFlags, (Opcode == AArch64::ADDSXri));
     MI.eraseFromParent();
+    Offset = StackOffset();
+    return true;
+  }
+
+  if (Opcode == AArch64::LD1H_ZaXI_W || Opcode == AArch64::LD1H_ZaXI_D ||
+      Opcode == AArch64::LD1H_ZaXI_H || Opcode == AArch64::LD1H_ZaXI_B ||
+      Opcode == AArch64::LD1H_ZaXI_Q || Opcode == AArch64::ST1H_ZaXI_W ||
+      Opcode == AArch64::ST1H_ZaXI_D || Opcode == AArch64::ST1H_ZaXI_H ||
+      Opcode == AArch64::ST1H_ZaXI_B || Opcode == AArch64::ST1H_ZaXI_Q) {
+    unsigned TempReg = emitSMEFrameIndex(MI, FrameReg, Offset, TII);
+    if (TempReg)
+      MI.getOperand(FrameRegIdx).ChangeToRegister(TempReg, false);
+    else
+      MI.getOperand(FrameRegIdx).ChangeToRegister(FrameReg, false);
     Offset = StackOffset();
     return true;
   }

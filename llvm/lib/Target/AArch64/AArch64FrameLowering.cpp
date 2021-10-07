@@ -60,6 +60,10 @@
 // |        SVE stack objects          |
 // |                                   |
 // |-----------------------------------|
+// |                                   |
+// |        SME stack objects          |
+// |                                   |
+// |-----------------------------------|
 // |.empty.space.to.make.part.below....|
 // |.aligned.in.case.it.needs.more.than| (size of this area is unknown at
 // |.the.standard.16-byte.alignment....|  compile time; if present)
@@ -340,7 +344,7 @@ static StackOffset getSVEStackSize(const MachineFunction &MF) {
 // Returns the size of the SME stackframe.
 static StackOffset getSMEStackSize(const MachineFunction &MF) {
   const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-  return StackOffset::getScalable((int64_t)AFI->getStackSizeSME());
+  return StackOffset::getDoublyScalable((int64_t)AFI->getStackSizeSME());
 }
 
 bool AArch64FrameLowering::canUseRedZone(const MachineFunction &MF) const {
@@ -390,6 +394,10 @@ bool AArch64FrameLowering::hasFP(const MachineFunction &MF) const {
   // DefaultSafeSPDisplacement is fine as we only emergency spill GP regs.
   if (!MFI.isMaxCallFrameSizeComputed() ||
       MFI.getMaxCallFrameSize() > DefaultSafeSPDisplacement)
+    return true;
+
+  // If the stack frame contains both SVE and SME stack then return true.
+  if (getSVEStackSize(MF) && getSMEStackSize(MF))
     return true;
 
   return false;
@@ -1151,7 +1159,7 @@ static void emitSMEPrologEpilog(MachineBasicBlock &MBB,
   StackOffset AllocDeallocSME, StackSize = SMEStackSize;
   for (auto const &b : SMETiles) {
     int64_t size = b.first * b.second;
-    AllocDeallocSME = StackOffset::getScalable(size);
+    AllocDeallocSME = StackOffset::getDoublyScalable(size);
     if (prolog)
       emitSMEFrameOffset(MBB, MBBI, DL, AArch64::SP, AArch64::SP,
                          -AllocDeallocSME, TII, false, b.first,
@@ -2170,7 +2178,8 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
   if (AFI->hasStackFrame() && !isSVE && !isSME) {
     // We shouldn't prefer using the FP when there is an SVE area
     // in between the FP and the non-SVE locals/spills.
-    PreferFP &= !SVEStackSize;
+    // Prefer to use FP when there are both SME and SVE areas.
+    PreferFP &= !SVEStackSize && !SMEStackSize;
 
     // Note: Keeping the following as multiple 'if' statements rather than
     // merging to a single expression for readability.
@@ -2197,6 +2206,7 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
         // SP offset is unknown. We can use the base pointer if we have one and
         // FP is not preferred. If not, we're stuck with using FP.
         bool CanUseBP = RegInfo->hasBasePointer(MF);
+        // returns true when there is var obj + (SVE || SME).
         if (FPOffsetFits && CanUseBP) // Both are ok. Pick the best.
           UseFP = PreferFP;
         else if (!CanUseBP) // Can't use BP. Forced to use FP.
@@ -2231,41 +2241,46 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
       "In the presence of dynamic stack pointer realignment, "
       "non-argument/CSR objects cannot be accessed through the frame pointer");
 
-  if (isSVE) {
-    StackOffset FPOffset =
-        StackOffset::get(-AFI->getCalleeSaveBaseToFrameRecordOffset(), ObjectOffset);
-    StackOffset SPOffset =
-        SVEStackSize +
-        StackOffset::get(MFI.getStackSize() - AFI->getCalleeSavedStackSize(),
-                         ObjectOffset);
-    // Always use the FP for SVE spills if available and beneficial.
-    if (hasFP(MF) && (SPOffset.getFixed() ||
-                      FPOffset.getScalable() < SPOffset.getScalable() ||
-                      RegInfo->hasStackRealignment(MF))) {
+  if (SVEStackSize && !SMEStackSize) {
+    if (isSVE) {
+      StackOffset FPOffset = StackOffset::get(
+          -AFI->getCalleeSaveBaseToFrameRecordOffset(), ObjectOffset);
+      StackOffset SPOffset =
+          SVEStackSize +
+          StackOffset::get(MFI.getStackSize() - AFI->getCalleeSavedStackSize(),
+                           ObjectOffset, 0);
+      // Always use the FP for SVE spills if available and beneficial.
+      if (hasFP(MF) &&
+          (SPOffset.getFixed() ||
+           FPOffset.getScalable() < SPOffset.getScalable() ||
+           RegInfo->hasStackRealignment(MF))) {
+        FrameReg = RegInfo->getFrameRegister(MF);
+        return FPOffset;
+      }
+
+      FrameReg = RegInfo->hasBasePointer(MF) ? RegInfo->getBaseRegister()
+                                             : (unsigned)AArch64::SP;
+      return SPOffset;
+    }
+  } else if (SMEStackSize && SVEStackSize) {
+    if (isSVE) {
+      // Always use FP, when we have SVE and SME stack objects.
+      StackOffset FPOffset = StackOffset::get(
+          -AFI->getCalleeSaveBaseToFrameRecordOffset(), ObjectOffset);
       FrameReg = RegInfo->getFrameRegister(MF);
       return FPOffset;
     }
+    if (isSME) {
+      StackOffset SPOffset = StackOffset::get(
+          MFI.getStackSize() - AFI->getCalleeSavedStackSize(), 0, ObjectOffset);
+      FrameReg = RegInfo->getBaseRegister();
 
-    FrameReg = RegInfo->hasBasePointer(MF) ? RegInfo->getBaseRegister()
-                                           : (unsigned)AArch64::SP;
-    return SPOffset;
-  }
-
-  // Resolve frame offset for SME.
-  // Fp-relative : calleesaves + SVEarea + ObjectOffset.
-  // Sp-relative : stacksize - calleesaves - SVEStacksize + ObjectOffset.
-  // If we have FP and no SME stack area then use FP, hence calculating
-  // only SPOffset and using it here. Using SP is beneficial for SME
-  // stack area access.
-  if (isSME) {
-    StackOffset SPOffset =
-        SMEStackSize +
-        StackOffset::get(MFI.getStackSize() - AFI->getCalleeSavedStackSize(),
-                         ObjectOffset) -
-        SVEStackSize;
-
-    FrameReg = RegInfo->hasBasePointer(MF) ? RegInfo->getBaseRegister()
-                                           : (unsigned)AArch64::SP;
+      return SPOffset;
+    }
+  } else if (SMEStackSize) {
+    StackOffset SPOffset = StackOffset::get(
+        MFI.getStackSize() - AFI->getCalleeSavedStackSize(), 0, ObjectOffset);
+    FrameReg = (unsigned)AArch64::SP;
     return SPOffset;
   }
 
@@ -2977,11 +2992,10 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   // If any callee-saved registers are used, the frame cannot be eliminated.
   int64_t SVEStackSize =
       alignTo(SVECSStackSize + estimateSVEStackObjectOffsets(MFI), 16);
-
   int64_t SMEStackSize = alignTo(estimateSMEStackObjectOffsets(MFI), 16);
-
   bool CanEliminateFrame =
       (SavedRegs.count() == 0) && !SVEStackSize && !SMEStackSize;
+
   // The CSR spill slots have not been allocated yet, so estimateStackSize
   // won't include them.
   unsigned EstimatedStackSizeLimit = estimateRSStackSizeLimit(MF);
@@ -3206,13 +3220,14 @@ int64_t AArch64FrameLowering::assignSVEStackObjectOffsets(
 
 // Determine the SME stack object offsets based on size of each object.
 static int64_t determineSMEStackObjectOffsets(MachineFrameInfo &MFI,
+                                              int64_t SVEStackSize,
                                               bool AssignOffsets) {
   auto Assign = [&MFI](int FI, int64_t Offset) {
     LLVM_DEBUG(dbgs() << "alloc FI(" << FI << ") at SP[" << Offset << "]\n");
     MFI.setObjectOffset(FI, Offset);
   };
 
-  int64_t Offset = 0;
+  int64_t Offset = SVEStackSize;
   SmallVector<int, 8> ObjectsToAllocate;
   for (int I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I) {
     if (MFI.getStackID(I) != TargetStackID::ScalableMatrix)
@@ -3221,6 +3236,8 @@ static int64_t determineSMEStackObjectOffsets(MachineFrameInfo &MFI,
     ObjectsToAllocate.push_back(I);
   }
 
+  if (ObjectsToAllocate.begin() == ObjectsToAllocate.end())
+    return 0;
   for (unsigned FI : ObjectsToAllocate) {
     Align Alignment = MFI.getObjectAlign(FI);
     if (Alignment > Align(16))
@@ -3236,12 +3253,13 @@ static int64_t determineSMEStackObjectOffsets(MachineFrameInfo &MFI,
 
 int64_t AArch64FrameLowering::estimateSMEStackObjectOffsets(
     MachineFrameInfo &MFI) const {
-  return determineSMEStackObjectOffsets(MFI, false);
+  return determineSMEStackObjectOffsets(MFI, 0, true);
 }
 
 int64_t
-AArch64FrameLowering::assignSMEStackObjectOffsets(MachineFrameInfo &MFI) const {
-  return determineSMEStackObjectOffsets(MFI, true);
+AArch64FrameLowering::assignSMEStackObjectOffsets(MachineFrameInfo &MFI,
+                                                  int64_t SVEStackSize) const {
+  return determineSMEStackObjectOffsets(MFI, SVEStackSize, true);
 }
 
 void AArch64FrameLowering::processFunctionBeforeFrameFinalized(
@@ -3255,12 +3273,15 @@ void AArch64FrameLowering::processFunctionBeforeFrameFinalized(
   int64_t SVEStackSize =
       assignSVEStackObjectOffsets(MFI, MinCSFrameIndex, MaxCSFrameIndex);
 
+  // Pass the SVE stack size to compute the stack offsets of SME objects
+  // to ensure that SME objects are farther from stack pointer.
+  int64_t SMEStackSize = assignSMEStackObjectOffsets(MFI, SVEStackSize);
+
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   AFI->setStackSizeSVE(alignTo(SVEStackSize, 16U));
   AFI->setMinMaxSVECSFrameIndex(MinCSFrameIndex, MaxCSFrameIndex);
 
-  // Retrieve the SME stacksize and assign it to the AArch64MachineFunctionInfo.
-  uint64_t SMEStackSize = assignSMEStackObjectOffsets(MFI);
+  // Assign the SME stacksize to the AArch64MachineFunctionInfo.
   AFI->setStackSizeSME(alignTo(SMEStackSize, 16U));
 
   // If this function isn't doing Win64-style C++ EH, we don't need to do
