@@ -475,10 +475,15 @@ MachineRegisterInfo::EmitLiveInCopies(MachineBasicBlock *EntryMBB,
         --i; --e;
       } else {
         // Emit a copy.
-        BuildMI(*EntryMBB, EntryMBB->begin(), DebugLoc(),
-                TII.get(TargetOpcode::COPY), LiveIns[i].second)
-          .addReg(LiveIns[i].first);
-
+        MachineRegisterInfo *MRI = &MF->getRegInfo();
+        if (TRI.isSMERegisters(MRI->getRegClass(LiveIns[i].second))) {
+          TII.createTileCopy(*EntryMBB, EntryMBB->begin(), DebugLoc(),
+              LiveIns[i].first, 0, LiveIns[i].second);
+        } else {
+          BuildMI(*EntryMBB, EntryMBB->begin(), DebugLoc(),
+                  TII.get(TargetOpcode::COPY), LiveIns[i].second)
+            .addReg(LiveIns[i].first);
+        }
         // Add the register to the entry block live-in set.
         EntryMBB->addLiveIn(LiveIns[i].first);
       }
