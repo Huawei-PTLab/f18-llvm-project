@@ -898,6 +898,9 @@ bool RAGreedy::shouldEvict(LiveInterval &A, bool IsHint,
   if (CanSplit && IsHint && !BreaksHint)
     return true;
 
+  if (TRI->isZABReg(MRI->getRegClass(B.reg())))
+    return false;
+
   if (A.weight() > B.weight()) {
     LLVM_DEBUG(dbgs() << "should evict: " << B << " w= " << B.weight() << '\n');
     return true;
@@ -1852,6 +1855,10 @@ MCRegister RAGreedy::tryRegionSplit(LiveInterval &VirtReg,
                                     SmallVectorImpl<Register> &NewVRegs) {
   if (!TRI->shouldRegionSplitForVirtReg(*MF, VirtReg))
     return MCRegister::NoRegister;
+
+  if (TRI->isZABReg(MRI->getRegClass(VirtReg.reg())))
+    return MCRegister::NoRegister;
+
   unsigned NumCands = 0;
   BlockFrequency SpillCost = calcSpillCost();
   BlockFrequency BestCost;

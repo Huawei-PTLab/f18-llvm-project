@@ -351,6 +351,12 @@ bool AArch64RegisterInfo::isSMERegisters(const TargetRegisterClass *RC) const {
   return false;
 }
 
+bool AArch64RegisterInfo::isZABReg(const TargetRegisterClass *RC) const {
+  if (RC == &AArch64::MPR8RegClass)
+    return true;
+  return false;
+}
+
 const TargetRegisterClass *AArch64RegisterInfo::getVector() const {
   return &AArch64::ZPRRegClass;
 }

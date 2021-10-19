@@ -542,6 +542,10 @@ public:
     return false;
   }
 
+  virtual bool isZABReg(const TargetRegisterClass *RC) const {
+    return false;
+  }
+
   /// These 3 methods are to return the register class of the vector, predicate
   /// and selector registers for SMECOPY instruction from AArch64.
   virtual const TargetRegisterClass *getVector() const { return nullptr; }
