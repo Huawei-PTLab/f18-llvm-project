@@ -950,6 +950,8 @@ bool AArch64ExpandPseudo::expandSMESpillFill(
   DoneBB->splice(DoneBB->end(), &MBB, MI, MBB.end());
   DoneBB->transferSuccessors(&MBB);
 
+  MBB.addSuccessor(LoopBB);
+
   NextMBBI = MBB.end();
   MI.eraseFromParent();
 

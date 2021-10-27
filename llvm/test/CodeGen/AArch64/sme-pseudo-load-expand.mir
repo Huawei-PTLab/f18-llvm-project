@@ -21,6 +21,7 @@ body:                |
     ; CHECK:       mul     x1, x0, x0
     ; CHECK:       mov     x12, x0
     ; CHECK:       .LBB0_1:
+    ; CHECK:       This Inner Loop Header: Depth=1
     ; CHECK:       sub     x12, x12, #1
     ; CHECK:       sub     x1, x1, x0
     ; CHECK:       ld1b    {za0h.b[w12, 0]}, p0/z, [sp, x1]
@@ -30,6 +31,7 @@ body:                |
     ; CHECK:       mul     x1, x0, x0
     ; CHECK:       mov     x12, x0
     ; CHECK:       .LBB0_3:
+    ; CHECK:       This Inner Loop Header: Depth=1
     ; CHECK:       sub     x12, x12, #1
     ; CHECK:       sub     x1, x1, x0
     ; CHECK:       ld1h    {za0h.h[w12, 0]}, p0/z, [sp, x1, lsl #1]
@@ -39,6 +41,7 @@ body:                |
     ; CHECK:       mul     x1, x0, x0
     ; CHECK:       mov     x12, x0
     ; CHECK:       .LBB0_5:
+    ; CHECK:       This Inner Loop Header: Depth=1
     ; CHECK:       sub     x12, x12, #1
     ; CHECK:       sub     x1, x1, x0
     ; CHECK:       ld1w    {za0h.s[w12, 0]}, p0/z, [sp, x1, lsl #2]
@@ -48,6 +51,7 @@ body:                |
     ; CHECK:       mul     x1, x0, x0
     ; CHECK:       mov     x12, x0
     ; CHECK:       .LBB0_7:
+    ; CHECK:       This Inner Loop Header: Depth=1
     ; CHECK:       sub     x12, x12, #1
     ; CHECK:       sub     x1, x1, x0
     ; CHECK:       ld1d    {za0h.d[w12, 0]}, p0/z, [sp, x1, lsl #3]
@@ -77,6 +81,7 @@ body:                |
     ; CHECK:       mul     x1, x0, x0
     ; CHECK:       mov     x12, x0
     ; CHECK:       .LBB1_1:
+    ; CHECK:       This Inner Loop Header: Depth=1
     ; CHECK:       sub     x12, x12, #1
     ; CHECK:       sub     x1, x1, x0
     ; CHECK:       ld1b    {za0v.b[w12, 0]}, p0/z, [sp, x1]
@@ -86,6 +91,7 @@ body:                |
     ; CHECK:       mul     x1, x0, x0
     ; CHECK:       mov     x12, x0
     ; CHECK:       .LBB1_3:
+    ; CHECK:       This Inner Loop Header: Depth=1
     ; CHECK:       sub     x12, x12, #1
     ; CHECK:       sub     x1, x1, x0
     ; CHECK:       ld1h    {za0v.h[w12, 0]}, p0/z, [sp, x1, lsl #1]
@@ -95,6 +101,7 @@ body:                |
     ; CHECK:       mul     x1, x0, x0
     ; CHECK:       mov     x12, x0
     ; CHECK:       .LBB1_5:
+    ; CHECK:       This Inner Loop Header: Depth=1
     ; CHECK:       sub     x12, x12, #1
     ; CHECK:       sub     x1, x1, x0
     ; CHECK:       ld1w    {za0v.s[w12, 0]}, p0/z, [sp, x1, lsl #2]
@@ -104,6 +111,7 @@ body:                |
     ; CHECK:       mul     x1, x0, x0
     ; CHECK:       mov     x12, x0
     ; CHECK:       .LBB1_7:
+    ; CHECK:       This Inner Loop Header: Depth=1
     ; CHECK:       sub     x12, x12, #1
     ; CHECK:       sub     x1, x1, x0
     ; CHECK:       ld1d    {za0v.d[w12, 0]}, p0/z, [sp, x1, lsl #3]
