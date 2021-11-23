@@ -3415,18 +3415,32 @@ void JoinVals::eraseInstrs(SmallPtrSetImpl<MachineInstr*> &ErasedInstrs,
       }
 
       if (TII->isSMECopy(*MI)) {
-        // Except for the source and destination registers to be coalesced,
-        // all other operands in a SMECOPY are scratch registers. Erase
-        // the IMPLICIT_DEF's that produced them along with the SMECOPY.
-        for (unsigned j = 0, n = (MI->getNumOperands() - 2); j != n; ++j) {
-          MachineBasicBlock::instr_iterator CurrI = MI->getIterator();
-          --CurrI;
-          if (CurrI->getOpcode() == TargetOpcode::IMPLICIT_DEF) {
-            LLVM_DEBUG(dbgs() << "\t\t erased:\t" << *CurrI);
-            LIS->RemoveMachineInstrFromMaps(*CurrI);
-            LIS->removeInterval(CurrI->getOperand(0).getReg());
-            CurrI->eraseFromParent();
+        // Along with the SMECOPY, erase all its IMPLICIT_DEF operands,
+        // which should be everything except operands 0 and 1.
+        for (unsigned j = MI->getNumOperands() - 1; j > 1; j--) {
+          MachineBasicBlock::reverse_instr_iterator CurrI =
+              MI->getReverseIterator();
+          MachineInstr *FoundI = nullptr;
+          // Skip operands that are marked Undef
+          if (MI->getOperand(j).isUndef())
+            continue;
+          while (FoundI == nullptr && CurrI != MI->getParent()->rend()) {
+            if (CurrI->getNumOperands() > 0 &&
+                CurrI->getOperand(0).getReg() == MI->getOperand(j).getReg()) {
+              assert(
+                  CurrI->getOpcode() == TargetOpcode::IMPLICIT_DEF &&
+                  "all non-ZA operands in a SMECOPY should be IMPLICIT_DEFs");
+              FoundI = &*CurrI;
+            }
+            ++CurrI;
           }
+          assert(FoundI != nullptr &&
+                 "SMECOPY operands should be defined in the same BB");
+          ErasedInstrs.insert(FoundI);
+          LLVM_DEBUG(dbgs() << "\t\t erased:\t" << *FoundI);
+          LIS->RemoveMachineInstrFromMaps(*FoundI);
+          LIS->removeInterval(FoundI->getOperand(0).getReg());
+          FoundI->eraseFromParent();
         }
       }
 
