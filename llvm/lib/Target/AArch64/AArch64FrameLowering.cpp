@@ -1151,6 +1151,8 @@ static void emitSMEPrologEpilog(MachineBasicBlock &MBB,
   for (int StackObj = MFI.getObjectIndexBegin();
        StackObj < MFI.getObjectIndexEnd(); StackObj++) {
     if (MFI.getStackID(StackObj) == TargetStackID::ScalableMatrix) {
+      if (MFI.isDeadObjectIndex(StackObj))
+        continue;
       SMETiles[MFI.getObjectSize(StackObj)]++;
     }
   }
