@@ -871,7 +871,7 @@ class ZPRRegOp <string Suffix, AsmOperandClass C, ElementSizeEnum Size,
 // SVE predicate register classes.
 class PPRClass<int lastreg> : RegisterClass<
                                   "AArch64",
-                                  [ nxv16i1, nxv8i1, nxv4i1, nxv2i1 ], 16,
+                                  [ nxv16i1, nxv8i1, nxv4i1, nxv2i1, nxv1i1 ], 16,
                                   (sequence "P%u", 0, lastreg)> {
   let Size = 16;
 }
@@ -912,7 +912,7 @@ class ZPRClass<int lastreg> : RegisterClass<"AArch64",
                                              nxv2f16, nxv4f16, nxv8f16,
                                              nxv2bf16, nxv4bf16, nxv8bf16,
                                              nxv2f32, nxv4f32,
-                                             nxv2f64],
+                                             nxv2f64, nxv1i128],
                                             128, (sequence "Z%u", 0, lastreg)> {
   let Size = 128;
 }

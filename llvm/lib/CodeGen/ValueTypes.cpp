@@ -526,6 +526,8 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
     return ScalableVectorType::get(Type::getDoubleTy(Context), 4);
   case MVT::nxv8f64:
     return ScalableVectorType::get(Type::getDoubleTy(Context), 8);
+  case MVT::nxv1i128:
+    return ScalableVectorType::get(Type::getInt128Ty(Context), 1);
   case MVT::Metadata: return Type::getMetadataTy(Context);
   // SME types
   case MVT::mxv256i8:

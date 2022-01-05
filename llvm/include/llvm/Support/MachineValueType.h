@@ -222,31 +222,33 @@ namespace llvm {
       nxv16i64       = 150,  // n x 16 x i64
       nxv32i64       = 151,  // n x 32 x i64
 
+      nxv1i128       = 152,  // n x  1 x i128
+
       FIRST_INTEGER_SCALABLE_VECTOR_VALUETYPE = nxv1i1,
-      LAST_INTEGER_SCALABLE_VECTOR_VALUETYPE = nxv32i64,
+      LAST_INTEGER_SCALABLE_VECTOR_VALUETYPE = nxv1i128,
 
-      nxv1f16        = 152,  // n x  1 x f16
-      nxv2f16        = 153,  // n x  2 x f16
-      nxv4f16        = 154,  // n x  4 x f16
-      nxv8f16        = 155,  // n x  8 x f16
-      nxv16f16       = 156,  // n x 16 x f16
-      nxv32f16       = 157,  // n x 32 x f16
+      nxv1f16        = 153,  // n x  1 x f16
+      nxv2f16        = 154,  // n x  2 x f16
+      nxv4f16        = 155,  // n x  4 x f16
+      nxv8f16        = 156,  // n x  8 x f16
+      nxv16f16       = 157,  // n x 16 x f16
+      nxv32f16       = 158,  // n x 32 x f16
 
-      nxv1bf16       = 158,  // n x  1 x bf16
-      nxv2bf16       = 159,  // n x  2 x bf16
-      nxv4bf16       = 160,  // n x  4 x bf16
-      nxv8bf16       = 161,  // n x  8 x bf16
+      nxv1bf16       = 159,  // n x  1 x bf16
+      nxv2bf16       = 160,  // n x  2 x bf16
+      nxv4bf16       = 161,  // n x  4 x bf16
+      nxv8bf16       = 162,  // n x  8 x bf16
 
-      nxv1f32        = 162,  // n x  1 x f32
-      nxv2f32        = 163,  // n x  2 x f32
-      nxv4f32        = 164,  // n x  4 x f32
-      nxv8f32        = 165,  // n x  8 x f32
-      nxv16f32       = 166,  // n x 16 x f32
+      nxv1f32        = 163,  // n x  1 x f32
+      nxv2f32        = 164,  // n x  2 x f32
+      nxv4f32        = 165,  // n x  4 x f32
+      nxv8f32        = 166,  // n x  8 x f32
+      nxv16f32       = 167,  // n x 16 x f32
 
-      nxv1f64        = 167,  // n x  1 x f64
-      nxv2f64        = 168,  // n x  2 x f64
-      nxv4f64        = 169,  // n x  4 x f64
-      nxv8f64        = 170,  // n x  8 x f64
+      nxv1f64        = 168,  // n x  1 x f64
+      nxv2f64        = 169,  // n x  2 x f64
+      nxv4f64        = 170,  // n x  4 x f64
+      nxv8f64        = 171,  // n x  8 x f64
 
       FIRST_FP_SCALABLE_VECTOR_VALUETYPE = nxv1f16,
       LAST_FP_SCALABLE_VECTOR_VALUETYPE = nxv8f64,
@@ -257,31 +259,31 @@ namespace llvm {
       FIRST_VECTOR_VALUETYPE = v1i1,
       LAST_VECTOR_VALUETYPE  = nxv8f64,
 
-      mxv256i8       = 171,   // m x (16x16) x i8
-      mxv64i16       = 172,   // m x   (8x8) x i16
-      mxv16i32       = 173,   // m x   (4x4) x i32
-      mxv4i64        = 174,   // m x   (2x2) x i64
-      mxv1i128       = 175,   // m x   (1x1) x i128
-      mxv16f32       = 176,   // m x   (4x4) x f32
-      mxv4f64        = 177,   // m x   (2x2) x f64
+      mxv256i8       = 172,   // m x (16x16) x i8
+      mxv64i16       = 173,   // m x   (8x8) x i16
+      mxv16i32       = 174,   // m x   (4x4) x i32
+      mxv4i64        = 175,   // m x   (2x2) x i64
+      mxv1i128       = 176,   // m x   (1x1) x i128
+      mxv16f32       = 177,   // m x   (4x4) x f32
+      mxv4f64        = 178,   // m x   (2x2) x f64
 
       FIRST_SCALABLE_MATRIX_VALUETYPE = mxv256i8,
       LAST_SCALABLE_MATRIX_VALUETYPE = mxv4f64,
 
-      x86mmx         = 178,    // This is an X86 MMX value
+      x86mmx         = 179,    // This is an X86 MMX value
 
-      Glue           = 179,    // This glues nodes together during pre-RA sched
+      Glue           = 180,    // This glues nodes together during pre-RA sched
 
-      isVoid         = 180,    // This has no value
+      isVoid         = 181,    // This has no value
 
-      Untyped        = 181,    // This value takes a register, but has
+      Untyped        = 182,    // This value takes a register, but has
                                // unspecified type.  The register class
                                // will be determined by the opcode.
 
-      funcref        = 182,    // WebAssembly's funcref type
-      externref      = 183,    // WebAssembly's externref type
-      x86amx         = 184,    // This is an X86 AMX value
-      i64x8          = 185,    // 8 Consecutive GPRs (AArch64)
+      funcref        = 183,    // WebAssembly's funcref type
+      externref      = 184,    // WebAssembly's externref type
+      x86amx         = 185,    // This is an X86 AMX value
+      i64x8          = 186,    // 8 Consecutive GPRs (AArch64)
 
       FIRST_VALUETYPE =  1,    // This is always the beginning of the list.
       LAST_VALUETYPE = i64x8,  // This always remains at the end of the list.
@@ -639,6 +641,7 @@ namespace llvm {
       case nxv32i64:
       case mxv4i64: return i64;
       case v1i128:
+      case nxv1i128:
       case mxv1i128: return i128;
       case v1f16:
       case v2f16:
@@ -876,6 +879,7 @@ namespace llvm {
       case nxv1bf16:
       case nxv1f32:
       case nxv1f64:
+      case nxv1i128:
       case mxv1i128: return 1;
       }
     }
@@ -1011,6 +1015,7 @@ namespace llvm {
       case nxv8bf16:
       case nxv4f32:
       case nxv2f64:
+      case nxv1i128:
       case mxv1i128: return TypeSize::Scalable(128);
       case v5i32:
       case v5f32: return TypeSize::Fixed(160);
@@ -1433,6 +1438,9 @@ namespace llvm {
           if (NumElements == 2)  return MVT::nxv2f64;
           if (NumElements == 4)  return MVT::nxv4f64;
           if (NumElements == 8)  return MVT::nxv8f64;
+          break;
+        case MVT::i128:
+          if (NumElements == 1)  return MVT::nxv1i128;
           break;
       }
       return (MVT::SimpleValueType)(MVT::INVALID_SIMPLE_VALUE_TYPE);

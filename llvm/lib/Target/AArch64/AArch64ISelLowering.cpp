@@ -367,6 +367,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget->hasSME()) {
+    // Add predicate type for SME
+    addRegisterClass(MVT::nxv1i1, &AArch64::PPRRegClass);
     // Add legal SME data types
     addRegisterClass(MVT::mxv256i8, &AArch64::MPR8RegClass);
     addRegisterClass(MVT::mxv64i16, &AArch64::MPR16RegClass);
