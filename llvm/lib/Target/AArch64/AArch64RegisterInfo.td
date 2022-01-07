@@ -1234,6 +1234,14 @@ def MPR128  : RegisterClass<"AArch64", [mxv1i128],  128, (add (sequence "ZAQ%u",
   let Size = 128;
 }
 
+def ZAZeroOperand : RegisterClass<"AArch64", [mxv256i8, mxv64i16,
+                                              mxv64f16, mxv64bf16,
+                                              mxv16i32, mxv16f32,
+                                              mxv4i64, mxv4f64], 128,
+                                             (add MPR, MPR8, MPR16, MPR32, MPR64)> {
+  let Size = 256;
+}
+
 // SME Register Operands
 // There are three types of SME matrix register operands:
 // * Tiles:
@@ -1353,7 +1361,7 @@ class MatrixTileListAsmOperand : AsmOperandClass {
   let PredicateMethod = "isMatrixTileList";
 }
 
-class MatrixTileListOperand : Operand<i8> {
+class MatrixTileListOperand : RegisterOperand<ZAZeroOperand> {
   let ParserMatchClass = MatrixTileListAsmOperand<>;
   let DecoderMethod = "DecodeMatrixTileListRegisterClass";
   let EncoderMethod = "EncodeMatrixTileListRegisterClass";

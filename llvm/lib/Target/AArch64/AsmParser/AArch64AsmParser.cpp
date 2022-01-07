@@ -340,6 +340,7 @@ private:
   } Kind;
 
   SMLoc StartLoc, EndLoc;
+  SmallVector<unsigned, 8> Registers;
 
   struct TokOp {
     const char *Data;
@@ -384,10 +385,6 @@ private:
     unsigned RegNum;
     unsigned ElementWidth;
     MatrixKind Kind;
-  };
-
-  struct MatrixTileListOp {
-    unsigned RegMask = 0;
   };
 
   struct VectorListOp {
@@ -467,7 +464,6 @@ private:
     struct TokOp Tok;
     struct RegOp Reg;
     struct MatrixRegOp MatrixReg;
-    struct MatrixTileListOp MatrixTileList;
     struct VectorListOp VectorList;
     struct VectorIndexOp VectorIndex;
     struct ImmOp Imm;
@@ -521,7 +517,7 @@ public:
       MatrixReg = o.MatrixReg;
       break;
     case k_MatrixTileList:
-      MatrixTileList = o.MatrixTileList;
+      Registers = o.Registers;
       break;
     case k_VectorList:
       VectorList = o.VectorList;
@@ -633,9 +629,9 @@ public:
     return MatrixReg.Kind;
   }
 
-  unsigned getMatrixTileListRegMask() const {
-    assert(isMatrixTileList() && "Invalid access!");
-    return MatrixTileList.RegMask;
+  const SmallVectorImpl<unsigned> &getMatrixTileList() const {
+    assert(Kind == k_MatrixTileList && "Invalid access!");
+    return Registers;
   }
 
   RegConstraintEqualityTy getRegEqualityTy() const {
@@ -1662,9 +1658,11 @@ public:
 
   void addMatrixTileListOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    unsigned RegMask = getMatrixTileListRegMask();
-    assert(RegMask <= 0xFF && "Invalid mask!");
-    Inst.addOperand(MCOperand::createImm(RegMask));
+    const SmallVectorImpl<unsigned> &MatrixList = getMatrixTileList();
+    for (SmallVectorImpl<unsigned>::const_iterator I = MatrixList.begin();
+         I != MatrixList.end(); ++I) {
+      Inst.addOperand(MCOperand::createReg(*I));
+    }
   }
 
   void addVectorIndexOperands(MCInst &Inst, unsigned N) const {
@@ -2037,9 +2035,10 @@ public:
   }
 
   static std::unique_ptr<AArch64Operand>
-  CreateMatrixTileList(unsigned RegMask, SMLoc S, SMLoc E, MCContext &Ctx) {
+  CreateMatrixTileList(SmallVectorImpl<unsigned> &Registers, SMLoc S,
+                       SMLoc E, MCContext &Ctx) {
     auto Op = std::make_unique<AArch64Operand>(k_MatrixTileList, Ctx);
-    Op->MatrixTileList.RegMask = RegMask;
+    Op->Registers.assign(Registers.begin(), Registers.end());
     Op->StartLoc = S;
     Op->EndLoc = E;
     return Op;
@@ -2300,10 +2299,10 @@ void AArch64Operand::print(raw_ostream &OS) const {
     break;
   case k_MatrixTileList: {
     OS << "<matrixlist ";
-    unsigned RegMask = getMatrixTileListRegMask();
-    unsigned MaxBits = 8;
-    for (unsigned I = MaxBits; I > 0; --I)
-      OS << ((RegMask & (1 << (I - 1))) >> (I - 1));
+    const SmallVectorImpl<unsigned> &MatrixList = getMatrixTileList();
+    for (auto Reg : MatrixList) {
+      OS << Reg << " ";
+    }
     OS << '>';
     break;
   }
@@ -3877,22 +3876,25 @@ AArch64AsmParser::tryParseMatrixTileList(OperandVector &Operands) {
   auto LCurly = getTok();
   Lex(); // Eat left bracket token.
 
+  SmallVector<unsigned, 8> MatrixList;
+
   // Empty matrix list
   if (parseOptionalToken(AsmToken::RCurly)) {
     Operands.push_back(AArch64Operand::CreateMatrixTileList(
-        /*RegMask=*/0, S, getLoc(), getContext()));
+        MatrixList, S, getLoc(), getContext()));
     return MatchOperand_Success;
   }
 
   // Try parse {za} alias early
   if (getTok().getString().equals_insensitive("za")) {
     Lex(); // Eat 'za'
+    MatrixList.push_back(AArch64::ZA);
 
     if (parseToken(AsmToken::RCurly, "'}' expected"))
       return MatchOperand_ParseFail;
 
     Operands.push_back(AArch64Operand::CreateMatrixTileList(
-        /*RegMask=*/0xFF, S, getLoc(), getContext()));
+        MatrixList, S, getLoc(), getContext()));
     return MatchOperand_Success;
   }
 
@@ -3903,12 +3905,13 @@ AArch64AsmParser::tryParseMatrixTileList(OperandVector &Operands) {
   if (ParseRes != MatchOperand_Success) {
     getLexer().UnLex(LCurly);
     return ParseRes;
+  } else {
+    MatrixList.push_back(FirstReg);
   }
 
   const MCRegisterInfo *RI = getContext().getRegisterInfo();
 
   unsigned PrevReg = FirstReg;
-  unsigned Count = 1;
 
   SmallSet<unsigned, 8> DRegs;
   AArch64Operand::ComputeRegsForAlias(FirstReg, DRegs, ElementWidth);
@@ -3922,6 +3925,11 @@ AArch64AsmParser::tryParseMatrixTileList(OperandVector &Operands) {
     ParseRes = ParseMatrixTile(Reg, NextElementWidth);
     if (ParseRes != MatchOperand_Success)
       return ParseRes;
+
+    if (ElementWidth > 64) {
+      Error(TileLoc, "cannot zero 128-bit element tiles");
+      return MatchOperand_ParseFail;
+    }
 
     // Element size must match on all regs in the list.
     if (ElementWidth != NextElementWidth) {
@@ -3938,9 +3946,8 @@ AArch64AsmParser::tryParseMatrixTileList(OperandVector &Operands) {
       SeenRegs.insert(Reg);
       AArch64Operand::ComputeRegsForAlias(Reg, DRegs, ElementWidth);
     }
-
     PrevReg = Reg;
-    ++Count;
+    MatrixList.push_back(Reg);
   }
 
   if (parseToken(AsmToken::RCurly, "'}' expected"))
@@ -3951,7 +3958,8 @@ AArch64AsmParser::tryParseMatrixTileList(OperandVector &Operands) {
     RegMask |= 0x1 << (RI->getEncodingValue(Reg) -
                        RI->getEncodingValue(AArch64::ZAD0));
   Operands.push_back(
-      AArch64Operand::CreateMatrixTileList(RegMask, S, getLoc(), getContext()));
+      AArch64Operand::CreateMatrixTileList(MatrixList, S, getLoc(),
+                                           getContext()));
 
   return MatchOperand_Success;
 }

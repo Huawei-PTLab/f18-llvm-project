@@ -122,6 +122,9 @@ static DecodeStatus DecodeMatrixTileListRegisterClass(MCInst &Inst,
                                                       unsigned RegMask,
                                                       uint64_t Address,
                                                       const void *Decoder);
+static DecodeStatus DecodeZeroInstruction(MCInst &MI, uint32_t insn,
+                                          uint64_t Address,
+                                          const void *Decoder);
 static DecodeStatus DecodePPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Address,
                                            const void *Decoder);
@@ -633,7 +636,22 @@ static DecodeStatus DecodeMatrixTileListRegisterClass(MCInst &Inst,
                                                       const void *Decoder) {
   if (RegMask > 0xFF)
     return Fail;
-  Inst.addOperand(MCOperand::createImm(RegMask));
+  // When decoding the Register List we can decode it to a list of only ZAD
+  // registers as the optimal register list is required only when printing
+  // assembly which is handled by AArch64InstPrinter::printRegListMask(..)
+  for (unsigned i = 0; i < 8; ++i)
+    if (RegMask & 1 << i)
+      Inst.addOperand(MCOperand::createReg(AArch64::ZAD0 + i));
+  return Success;
+}
+
+static DecodeStatus DecodeZeroInstruction(MCInst &MI, uint32_t insn,
+                                          uint64_t Address,
+                                          const void *Decoder) {
+  DecodeStatus S = Success;
+  unsigned mask = fieldFromInstruction(insn, 0, 8);
+  if (!Check(S, DecodeMatrixTileListRegisterClass(MI, mask, Address, Decoder)))
+    return Fail;
   return Success;
 }
 

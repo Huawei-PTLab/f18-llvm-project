@@ -247,6 +247,19 @@ static inline bool atomicBarrierDroppedOnZero(unsigned Opcode) {
   return false;
 }
 
+static inline unsigned getSMERegMask(unsigned RegNum) {
+  if (RegNum == AArch64::ZAB0 || RegNum == AArch64::ZA)
+    return 255;
+  else if (RegNum >= AArch64::ZAH0 && RegNum <= AArch64::ZAH1)
+    return 85 * (1 << (RegNum - AArch64::ZAH0));
+  else if (RegNum >= AArch64::ZAS0 && RegNum <= AArch64::ZAS3)
+    return 17 * (1 << (RegNum - AArch64::ZAS0));
+  else if (RegNum >= AArch64::ZAD0 && RegNum <= AArch64::ZAD7)
+    return 1 << (RegNum - AArch64::ZAD0);
+  else
+    llvm_unreachable("Invalid register width!");
+}
+
 namespace AArch64CC {
 
 // The CondCodes constants map directly to the 4-bit encoding of the condition

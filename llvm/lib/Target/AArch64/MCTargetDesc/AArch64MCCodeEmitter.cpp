@@ -526,9 +526,12 @@ AArch64MCCodeEmitter::getVecShiftL8OpValue(const MCInst &MI, unsigned OpIdx,
 uint32_t AArch64MCCodeEmitter::EncodeMatrixTileListRegisterClass(
     const MCInst &MI, unsigned OpIdx, SmallVectorImpl<MCFixup> &Fixups,
     const MCSubtargetInfo &STI) const {
-  unsigned RegMask = MI.getOperand(OpIdx).getImm();
-  assert(RegMask <= 0xFF && "Invalid register mask!");
-  return RegMask;
+  unsigned Mask = 0;
+  for (unsigned i = OpIdx; i < MI.getNumOperands(); ++i) {
+    unsigned RegNum = MI.getOperand(i).getReg();
+    Mask |= getSMERegMask(RegNum);
+  }
+  return Mask;
 }
 
 uint32_t

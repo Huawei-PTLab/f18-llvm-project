@@ -1341,33 +1341,76 @@ void AArch64InstPrinter::printGPRSeqPairsClassOperand(const MCInst *MI,
   O << getRegisterName(Even) << ", " << getRegisterName(Odd);
 }
 
-static const unsigned MatrixZADRegisterTable[] = {
-  AArch64::ZAD0, AArch64::ZAD1, AArch64::ZAD2, AArch64::ZAD3,
-  AArch64::ZAD4, AArch64::ZAD5, AArch64::ZAD6, AArch64::ZAD7
-};
-
 void AArch64InstPrinter::printMatrixTileList(const MCInst *MI, unsigned OpNum,
                                              const MCSubtargetInfo &STI,
                                              raw_ostream &O) {
-  unsigned MaxRegs = 8;
-  unsigned RegMask = MI->getOperand(OpNum).getImm();
-
-  unsigned NumRegs = 0;
-  for (unsigned I = 0; I < MaxRegs; ++I)
-    if ((RegMask & (1 << I)) != 0)
-      ++NumRegs;
+  unsigned Mask = 0;
+  for (unsigned i = OpNum; i < MI->getNumOperands(); ++i) {
+    unsigned RegNum = MI->getOperand(i).getReg();
+    Mask |= getSMERegMask(RegNum);
+  }
 
   O << "{";
-  unsigned Printed = 0;
-  for (unsigned I = 0; I < MaxRegs; ++I) {
-    unsigned Reg = RegMask & (1 << I);
-    if (Reg == 0)
-      continue;
-    O << getRegisterName(MatrixZADRegisterTable[I]);
-    if (Printed + 1 != NumRegs)
-      O << ", ";
-    ++Printed;
+
+  // D register masks for each type of ZA register
+  // {ZA0.B} => {ZA0.D, ZA1.D, ZA2.D, ZA3.D, ZA4.D, ZA5.D, ZA6.D, ZA7.D}
+  // {{1, 1, 1, 1, 1, 1, 1, 1}};
+  unsigned ZAb[1] = {255};
+
+  // {ZA0.H, ZA1.H} => {{ZA0.D, ZA2.D, ZA4.D, ZA6.D},
+  //                    {ZA1.D, ZA3.D, ZA5.D, ZA7.D}}
+  unsigned ZAh[2] = {85, 170};
+
+  // {ZA0.S, ZA1.S, ZA2.S, ZA3.S} => {{ZA0.D, ZA4.D}, {ZA1.D, ZA5.D},
+  //                                  {ZA2.D, ZA6.D}, {ZA3.D, ZA7.D}}
+  unsigned ZAs[4] = {17, 34, 68, 136};
+
+  auto printGreedyRegisterList = [&O, &Mask]
+                                 (unsigned NumberOfTiles, unsigned FirstRegister,
+                                  unsigned ZA[]) {
+    unsigned Tempmask = Mask;
+    SmallVector<unsigned, 4> RegList;
+    for (unsigned i = 0; i < NumberOfTiles; ++i) {
+      if ((ZA[i] & Mask) == ZA[i]) {
+         Tempmask = Tempmask ^ ZA[i];
+         RegList.push_back(i);
+      }
+    }
+
+    if ((Tempmask & 255) == 0) {
+      for (unsigned k = 0; k < RegList.size(); ++k) {
+        if (k > 0)
+          O << ", ";
+        O << getRegisterName(FirstRegister + unsigned(RegList[k]));
+      }
+      Mask = Tempmask;
+      return true;
+    }
+    return false;
+  };
+
+  bool val = false;
+  // Greedy approach is to print in the order of ZAB, ZAH, ZAS and ZAD tiles
+  val = printGreedyRegisterList(1, AArch64::ZA, ZAb);
+  if (!val)
+    val = printGreedyRegisterList(2, AArch64::ZAH0, ZAh);
+  if (!val)
+    val = printGreedyRegisterList(4, AArch64::ZAS0, ZAs);
+
+  // ZAD
+  if (!val) {
+    for (unsigned i = 0, k = 0; i < 8; ++i) {
+      unsigned bit = Mask & 1;
+      if (bit != 0) {
+        if (k > 0)
+          O << ", ";
+        O << getRegisterName(AArch64::ZAD0 + i);
+        ++k;
+      }
+      Mask = Mask >> 1;
+    }
   }
+
   O << "}";
 }
 
