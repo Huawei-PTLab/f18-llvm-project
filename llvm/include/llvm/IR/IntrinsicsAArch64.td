@@ -1589,7 +1589,7 @@ class SME_Mov_Intrinsic
                   LLVMScalarOrSameVectorWidth<1, llvm_i1_ty>, // Pg
                   LLVMMatchType<0>,                           // Matrix
                   llvm_i32_ty,                                // Wv
-                  llvm_i32_ty,                                // Offset
+                  llvm_i64_ty,                                // Offset
                   llvm_anyvector_ty                           // Vector
                 ],
                 [IntrNoMem]>;
@@ -1600,7 +1600,7 @@ class SME_Mov_Vec_Intrinsic
                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, // Pg
                   llvm_anymatrix_ty,                          // Matrix
                   llvm_i32_ty,                                // Wv
-                  llvm_i32_ty                                 // Offset
+                  llvm_i64_ty                                 // Offset
                 ],
                 [IntrNoMem]>;
 

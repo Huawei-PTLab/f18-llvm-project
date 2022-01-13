@@ -445,6 +445,18 @@ multiclass sme_fill<string opcodestr> {
 // Move instructions
 //===----------------------------------------------------------------------===//
 
+class SME_3_Op_Imm_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
+                       ValueType vt2, ValueType vt3, Operand ImmTy,
+                       Instruction inst>
+: Pat<(vtd (op vt1:$Op1, vt2:$Op2, vt3:$Op3, ImmTy:$Op4)),
+      (inst $Op1, $Op2, $Op3, ImmTy:$Op4)>;
+
+class SME_4_Op_Imm_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
+                       ValueType vt2, ValueType vt3, Operand ImmTy,
+                       ValueType vt4, Instruction inst>
+: Pat<(vtd (op vt1:$op1, vt2:$op2, vt3:$op3, ImmTy:$op4, vt4:$op5)),
+      (inst $op2, $op3, ImmTy:$op4, $op1, $op5)>;
+
 class sme_vector_to_tile_base<bit Q, bit V, bits<2> sz, dag outs, dag ins,
                               string mnemonic, string argstr>
     : I<outs, ins, mnemonic, argstr, "", []>, Sched<[]> {
@@ -537,6 +549,14 @@ multiclass sme_vector_v_to_tile<string mnemonic, bit is_col> {
                                     !if(is_col, TileVectorOpV128,
                                                 TileVectorOpH128),
                                     ZPR128, sme_elm_idx0_0>;
+
+  def : SME_4_Op_Imm_Pat<mxv256i8, !if(is_col, int_aarch64_sme_mova_col, int_aarch64_sme_mova_row), nxv16i1, mxv256i8, i32, sme_elm_idx0_15, nxv16i8, !cast<Instruction>(NAME # _B)>;
+  def : SME_4_Op_Imm_Pat<mxv64i16, !if(is_col, int_aarch64_sme_mova_col, int_aarch64_sme_mova_row), nxv8i1, mxv64i16, i32, sme_elm_idx0_7, nxv8i16, !cast<Instruction>(NAME # _H)>;
+  def : SME_4_Op_Imm_Pat<mxv16i32, !if(is_col, int_aarch64_sme_mova_col, int_aarch64_sme_mova_row), nxv4i1, mxv16i32, i32, sme_elm_idx0_3, nxv4i32, !cast<Instruction>(NAME # _S)>;
+  def : SME_4_Op_Imm_Pat<mxv16f32, !if(is_col, int_aarch64_sme_mova_col, int_aarch64_sme_mova_row), nxv4i1, mxv16f32, i32, sme_elm_idx0_3, nxv4f32, !cast<Instruction>(NAME # _S)>;
+  def : SME_4_Op_Imm_Pat<mxv4i64, !if(is_col, int_aarch64_sme_mova_col, int_aarch64_sme_mova_row), nxv2i1, mxv4i64,  i32, sme_elm_idx0_1, nxv2i64, !cast<Instruction>(NAME # _D)>;
+  def : SME_4_Op_Imm_Pat<mxv4f64, !if(is_col, int_aarch64_sme_mova_col, int_aarch64_sme_mova_row), nxv2i1, mxv4f64, i32, sme_elm_idx0_1, nxv2f64, !cast<Instruction>(NAME # _D)>;
+  def : SME_4_Op_Imm_Pat<mxv1i128, !if(is_col, int_aarch64_sme_mova_col, int_aarch64_sme_mova_row), nxv1i1, mxv1i128, i32, sme_elm_idx0_0, nxv1i128, !cast<Instruction>(NAME # _Q)>;
 }
 
 multiclass sme_vector_to_tile<string mnemonic> {
@@ -628,6 +648,14 @@ multiclass sme_tile_to_vector_v<string mnemonic, bit is_col> {
   defm : sme_tile_to_vector_aliases<!cast<Instruction>(NAME # _Q), ZPR128,
                                     !if(is_col, TileVectorOpV128,
                                                 TileVectorOpH128), sme_elm_idx0_0>;
+
+  def : SME_3_Op_Imm_Pat<nxv16i8, !if(is_col, int_aarch64_sme_mova_vec_col, int_aarch64_sme_mova_vec_row), nxv16i1, mxv256i8, i32, sme_elm_idx0_15, !cast<Instruction>(NAME # _B)>;
+  def : SME_3_Op_Imm_Pat<nxv8i16, !if(is_col, int_aarch64_sme_mova_vec_col, int_aarch64_sme_mova_vec_row), nxv8i1, mxv64i16, i32, sme_elm_idx0_7, !cast<Instruction>(NAME # _H)>;
+  def : SME_3_Op_Imm_Pat<nxv4i32, !if(is_col, int_aarch64_sme_mova_vec_col, int_aarch64_sme_mova_vec_row), nxv4i1, mxv16i32, i32, sme_elm_idx0_3, !cast<Instruction>(NAME # _S)>;
+  def : SME_3_Op_Imm_Pat<nxv4f32, !if(is_col, int_aarch64_sme_mova_vec_col, int_aarch64_sme_mova_vec_row), nxv4i1, mxv16f32, i32, sme_elm_idx0_3, !cast<Instruction>(NAME # _S)>;
+  def : SME_3_Op_Imm_Pat<nxv2i64, !if(is_col, int_aarch64_sme_mova_vec_col, int_aarch64_sme_mova_vec_row), nxv2i1, mxv4i64,  i32, sme_elm_idx0_1, !cast<Instruction>(NAME # _D)>;
+  def : SME_3_Op_Imm_Pat<nxv2f64, !if(is_col, int_aarch64_sme_mova_vec_col, int_aarch64_sme_mova_vec_row), nxv2i1, mxv4f64,  i32, sme_elm_idx0_1, !cast<Instruction>(NAME # _D)>;
+  def : SME_3_Op_Imm_Pat<nxv1i128, !if(is_col, int_aarch64_sme_mova_vec_col, int_aarch64_sme_mova_vec_row), nxv1i1, mxv1i128, i32, sme_elm_idx0_0, !cast<Instruction>(NAME # _Q)>;
 }
 
 multiclass sme_tile_to_vector<string mnemonic> {
