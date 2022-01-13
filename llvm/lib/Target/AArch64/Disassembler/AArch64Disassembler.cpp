@@ -321,6 +321,7 @@ DecodeStatus AArch64Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
       // MOVA ZA0<HV>.B[<Ws>, <imm>], <Pg>/M, <Zn>.B
       //      ^ insert implicit 8-bit element tile
       MI.insert(MI.begin(), MCOperand::createReg(AArch64::ZAB0));
+      MI.insert(MI.begin(), MCOperand::createReg(AArch64::ZAB0));
       break;
     case AArch64::EXTRACT_ZPMXI_H_B:
     case AArch64::EXTRACT_ZPMXI_V_B:
@@ -341,7 +342,7 @@ DecodeStatus AArch64Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
     // 128-bit mova have implicit zero vector index.
     case AArch64::INSERT_MXIPZ_H_Q:
     case AArch64::INSERT_MXIPZ_V_Q:
-      MI.insert(MI.begin()+2, MCOperand::createImm(0));
+      MI.insert(MI.begin()+3, MCOperand::createImm(0));
       break;
     case AArch64::EXTRACT_ZPMXI_H_Q:
     case AArch64::EXTRACT_ZPMXI_V_Q:

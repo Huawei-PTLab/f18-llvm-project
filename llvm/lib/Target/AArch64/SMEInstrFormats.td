@@ -460,13 +460,15 @@ class sme_vector_to_tile_base<bit Q, bit V, bits<2> sz, dag outs, dag ins,
   let Inst{12-10} = Pg;
   let Inst{9-5}   = Zn;
   let Inst{4}     = 0b0;
+
+  let Constraints = "$ZAd = $_ZAd";
 }
 
 class sme_vector_to_tile_inst<bit Q, bits<2> sz, MatrixTileVectorOperand tile_ty,
                               bit is_col, Operand imm_ty, ZPRRegOp zpr_ty,
                               string mnemonic>
     : sme_vector_to_tile_base<Q, is_col, sz, (outs tile_ty:$ZAd),
-        (ins MatrixIndexGPR32Op12_15:$Rv, imm_ty:$imm, PPR3bAny:$Pg, zpr_ty:$Zn),
+        (ins tile_ty:$_ZAd, MatrixIndexGPR32Op12_15:$Rv, imm_ty:$imm, PPR3bAny:$Pg, zpr_ty:$Zn),
         mnemonic, "\t$ZAd[$Rv, $imm], $Pg/m, $Zn">;
 
 multiclass sme_vector_to_tile_aliases<Instruction inst,
