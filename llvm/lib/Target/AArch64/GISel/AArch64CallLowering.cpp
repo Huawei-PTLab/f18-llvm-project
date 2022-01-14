@@ -508,10 +508,12 @@ static void handleMustTailForwardedRegisters(MachineIRBuilder &MIRBuilder,
 
 bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
   auto &F = MF.getFunction();
-  if (isa<ScalableVectorType>(F.getReturnType()))
+  if (isa<ScalableVectorType>(F.getReturnType()) ||
+      isa<ScalableMatrixType>(F.getReturnType()))
     return true;
   if (llvm::any_of(F.args(), [](const Argument &A) {
-        return isa<ScalableVectorType>(A.getType());
+        return isa<ScalableVectorType>(A.getType()) ||
+               isa<ScalableMatrixType>(A.getType());
       }))
     return true;
   const auto &ST = MF.getSubtarget<AArch64Subtarget>();
