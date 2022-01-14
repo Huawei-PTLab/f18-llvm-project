@@ -375,10 +375,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::mxv256i8, &AArch64::MPR8RegClass);
     addRegisterClass(MVT::mxv64i16, &AArch64::MPR16RegClass);
     addRegisterClass(MVT::mxv16i32, &AArch64::MPR32RegClass);
-    addRegisterClass(MVT::mxv16f32, &AArch64::MPR32RegClass);
     addRegisterClass(MVT::mxv4i64, &AArch64::MPR64RegClass);
-    addRegisterClass(MVT::mxv4f64, &AArch64::MPR64RegClass);
     addRegisterClass(MVT::mxv1i128, &AArch64::MPR128RegClass);
+    addRegisterClass(MVT::mxv64bf16, &AArch64::MPR16RegClass);
+    addRegisterClass(MVT::mxv64f16, &AArch64::MPR16RegClass);
+    addRegisterClass(MVT::mxv16f32, &AArch64::MPR32RegClass);
+    addRegisterClass(MVT::mxv4f64, &AArch64::MPR64RegClass);
   }
 
   // Compute derived properties from the register classes
@@ -5384,7 +5386,9 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
                RegVT.getMatrixElementType() == MVT::i8)
         RC = &AArch64::MPR8RegClass;
       else if (RegVT.isScalableMatrix() &&
-               RegVT.getMatrixElementType() == MVT::i16)
+               (RegVT.getMatrixElementType() == MVT::i16 ||
+                RegVT.getMatrixElementType() == MVT::f16 ||
+                RegVT.getMatrixElementType() == MVT::bf16))
         RC = &AArch64::MPR16RegClass;
       else if (RegVT.isScalableMatrix() &&
                (RegVT.getMatrixElementType() == MVT::f32 ||

@@ -1538,7 +1538,7 @@ void AArch64DAGToDAGISel::SelectPredicatedMatrixLoad(SDNode *N, unsigned Opc) {
   unsigned Scale = 0;
   if (VT == MVT::mxv256i8)
     Scale = 0;
-  else if (VT == MVT::mxv64i16)
+  else if (VT == MVT::mxv64i16 || VT == MVT::mxv64f16 || VT == MVT::mxv64bf16)
     Scale = 1;
   else if (VT == MVT::mxv16i32 || VT == MVT::mxv16f32)
     Scale = 2;
@@ -1625,7 +1625,7 @@ void AArch64DAGToDAGISel::SelectPredicatedMatrixStore(SDNode *N, unsigned Opc) {
   unsigned Scale = 0;
   if (VT == MVT::mxv256i8)
     Scale = 0;
-  else if (VT == MVT::mxv64i16)
+  else if (VT == MVT::mxv64i16 || VT == MVT::mxv64f16 || VT == MVT::mxv64bf16)
     Scale = 1;
   else if (VT == MVT::mxv16i32 || VT == MVT::mxv16f32)
     Scale = 2;
@@ -4047,7 +4047,8 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       if (VT == MVT::mxv256i8) {
         SelectPredicatedMatrixLoad(Node, AArch64::LD1_MXIPXX_H_B);
         return;
-      } else if (VT == MVT::mxv64i16) {
+      } else if (VT == MVT::mxv64i16 || VT == MVT::mxv64f16 ||
+                 VT == MVT::mxv64bf16) {
         SelectPredicatedMatrixLoad(Node, AArch64::LD1_MXIPXX_H_H);
         return;
       } else if (VT == MVT::mxv16i32 || VT == MVT::mxv16f32) {
@@ -4066,7 +4067,8 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       if (VT == MVT::mxv256i8) {
         SelectPredicatedMatrixLoad(Node, AArch64::LD1_MXIPXX_V_B);
         return;
-      } else if (VT == MVT::mxv64i16) {
+      } else if (VT == MVT::mxv64i16 || VT == MVT::mxv64f16 ||
+                 VT == MVT::mxv64bf16) {
         SelectPredicatedMatrixLoad(Node, AArch64::LD1_MXIPXX_V_H);
         return;
       } else if (VT == MVT::mxv16i32 || VT == MVT::mxv16f32) {
@@ -4441,7 +4443,8 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       if (VT == MVT::mxv256i8) {
         SelectPredicatedMatrixStore(Node, AArch64::ST1_MXIPXX_H_B);
         return;
-      } else if (VT == MVT::mxv64i16) {
+      } else if (VT == MVT::mxv64i16 || VT == MVT::mxv64f16 ||
+                 VT == MVT::mxv64bf16) {
         SelectPredicatedMatrixStore(Node, AArch64::ST1_MXIPXX_H_H);
         return;
       } else if (VT == MVT::mxv16i32 || VT == MVT::mxv16f32) {
@@ -4461,7 +4464,8 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       if (VT == MVT::mxv256i8) {
         SelectPredicatedMatrixStore(Node, AArch64::ST1_MXIPXX_V_B);
         return;
-      } else if (VT == MVT::mxv64i16) {
+      } else if (VT == MVT::mxv64i16 || VT == MVT::mxv64f16 ||
+                 VT == MVT::mxv64bf16) {
         SelectPredicatedMatrixStore(Node, AArch64::ST1_MXIPXX_V_H);
         return;
       } else if (VT == MVT::mxv16i32 || VT == MVT::mxv16f32) {

@@ -264,26 +264,28 @@ namespace llvm {
       mxv16i32       = 174,   // m x   (4x4) x i32
       mxv4i64        = 175,   // m x   (2x2) x i64
       mxv1i128       = 176,   // m x   (1x1) x i128
-      mxv16f32       = 177,   // m x   (4x4) x f32
-      mxv4f64        = 178,   // m x   (2x2) x f64
+      mxv64bf16      = 177,   // m x   (8x8) x bf16
+      mxv64f16       = 178,   // m x   (8x8) x f16
+      mxv16f32       = 179,   // m x   (4x4) x f32
+      mxv4f64        = 180,   // m x   (2x2) x f64
 
       FIRST_SCALABLE_MATRIX_VALUETYPE = mxv256i8,
       LAST_SCALABLE_MATRIX_VALUETYPE = mxv4f64,
 
-      x86mmx         = 179,    // This is an X86 MMX value
+      x86mmx         = 181,    // This is an X86 MMX value
 
-      Glue           = 180,    // This glues nodes together during pre-RA sched
+      Glue           = 182,    // This glues nodes together during pre-RA sched
 
-      isVoid         = 181,    // This has no value
+      isVoid         = 183,    // This has no value
 
-      Untyped        = 182,    // This value takes a register, but has
+      Untyped        = 184,    // This value takes a register, but has
                                // unspecified type.  The register class
                                // will be determined by the opcode.
 
-      funcref        = 183,    // WebAssembly's funcref type
-      externref      = 184,    // WebAssembly's externref type
-      x86amx         = 185,    // This is an X86 AMX value
-      i64x8          = 186,    // 8 Consecutive GPRs (AArch64)
+      funcref        = 185,    // WebAssembly's funcref type
+      externref      = 186,    // WebAssembly's externref type
+      x86amx         = 187,    // This is an X86 AMX value
+      i64x8          = 188,    // 8 Consecutive GPRs (AArch64)
 
       FIRST_VALUETYPE =  1,    // This is always the beginning of the list.
       LAST_VALUETYPE = i64x8,  // This always remains at the end of the list.
@@ -659,7 +661,8 @@ namespace llvm {
       case nxv4f16:
       case nxv8f16:
       case nxv16f16:
-      case nxv32f16: return f16;
+      case nxv32f16:
+      case mxv64f16: return f16;
       case v2bf16:
       case v3bf16:
       case v4bf16:
@@ -671,7 +674,8 @@ namespace llvm {
       case nxv1bf16:
       case nxv2bf16:
       case nxv4bf16:
-      case nxv8bf16: return bf16;
+      case nxv8bf16:
+      case mxv64bf16: return bf16;
       case v1f32:
       case v2f32:
       case v3f32:
@@ -758,7 +762,9 @@ namespace llvm {
       case v64f64:
       case nxv64i1:
       case nxv64i8:
-      case mxv64i16: return 64;
+      case mxv64i16:
+      case mxv64f16:
+      case mxv64bf16: return 64;
       case v32i1:
       case v32i8:
       case v32i16:
@@ -1073,7 +1079,9 @@ namespace llvm {
       case v16f64: return TypeSize::Fixed(1024);
       case nxv32i32:
       case nxv16i64:
-      case mxv64i16: return TypeSize::Scalable(1024);
+      case mxv64i16:
+      case mxv64f16:
+      case mxv64bf16: return TypeSize::Scalable(1024);
       case v256i8:
       case v128i16:
       case v64i32:
@@ -1476,6 +1484,12 @@ namespace llvm {
           break;
         case MVT::i128:
           if (NumElements == 1)  return MVT::mxv1i128;
+          break;
+        case MVT::bf16:
+          if (NumElements == 64)  return MVT::mxv64bf16;
+          break;
+        case MVT::f16:
+          if (NumElements == 64)  return MVT::mxv64f16;
           break;
         case MVT::f32:
           if (NumElements == 16)  return MVT::mxv16f32;

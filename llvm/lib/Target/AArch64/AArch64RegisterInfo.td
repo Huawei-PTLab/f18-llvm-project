@@ -1221,7 +1221,7 @@ def MPR : RegisterClass<"AArch64", [mxv256i8], 128, (add ZA)> {
 def MPR8    : RegisterClass<"AArch64", [mxv256i8], 128, (add (sequence "ZAB%u", 0, 0))> {
   let Size = 2048;
 }
-def MPR16   : RegisterClass<"AArch64", [mxv64i16], 128, (add (sequence "ZAH%u", 0, 1))> {
+def MPR16   : RegisterClass<"AArch64", [mxv64i16, mxv64f16, mxv64bf16], 128, (add (sequence "ZAH%u", 0, 1))> {
   let Size = 1024;
 }
 def MPR32   : RegisterClass<"AArch64", [mxv16i32, mxv16f32],  128, (add (sequence "ZAS%u", 0, 3))> {

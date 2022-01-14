@@ -553,6 +553,8 @@ multiclass sme_vector_v_to_tile<string mnemonic, bit is_col> {
 
   def : SME_4_Op_Imm_Pat<mxv256i8, !if(is_col, int_aarch64_sme_mova_col, int_aarch64_sme_mova_row), nxv16i1, mxv256i8, i32, sme_elm_idx0_15, nxv16i8, !cast<Instruction>(NAME # _B)>;
   def : SME_4_Op_Imm_Pat<mxv64i16, !if(is_col, int_aarch64_sme_mova_col, int_aarch64_sme_mova_row), nxv8i1, mxv64i16, i32, sme_elm_idx0_7, nxv8i16, !cast<Instruction>(NAME # _H)>;
+  def : SME_4_Op_Imm_Pat<mxv64f16, !if(is_col, int_aarch64_sme_mova_col, int_aarch64_sme_mova_row), nxv8i1, mxv64f16, i32, sme_elm_idx0_7, nxv8f16, !cast<Instruction>(NAME # _H)>;
+  def : SME_4_Op_Imm_Pat<mxv64bf16, !if(is_col, int_aarch64_sme_mova_col, int_aarch64_sme_mova_row), nxv8i1, mxv64bf16, i32, sme_elm_idx0_7, nxv8bf16, !cast<Instruction>(NAME # _H)>;
   def : SME_4_Op_Imm_Pat<mxv16i32, !if(is_col, int_aarch64_sme_mova_col, int_aarch64_sme_mova_row), nxv4i1, mxv16i32, i32, sme_elm_idx0_3, nxv4i32, !cast<Instruction>(NAME # _S)>;
   def : SME_4_Op_Imm_Pat<mxv16f32, !if(is_col, int_aarch64_sme_mova_col, int_aarch64_sme_mova_row), nxv4i1, mxv16f32, i32, sme_elm_idx0_3, nxv4f32, !cast<Instruction>(NAME # _S)>;
   def : SME_4_Op_Imm_Pat<mxv4i64, !if(is_col, int_aarch64_sme_mova_col, int_aarch64_sme_mova_row), nxv2i1, mxv4i64,  i32, sme_elm_idx0_1, nxv2i64, !cast<Instruction>(NAME # _D)>;
@@ -652,6 +654,8 @@ multiclass sme_tile_to_vector_v<string mnemonic, bit is_col> {
 
   def : SME_3_Op_Imm_Pat<nxv16i8, !if(is_col, int_aarch64_sme_mova_vec_col, int_aarch64_sme_mova_vec_row), nxv16i1, mxv256i8, i32, sme_elm_idx0_15, !cast<Instruction>(NAME # _B)>;
   def : SME_3_Op_Imm_Pat<nxv8i16, !if(is_col, int_aarch64_sme_mova_vec_col, int_aarch64_sme_mova_vec_row), nxv8i1, mxv64i16, i32, sme_elm_idx0_7, !cast<Instruction>(NAME # _H)>;
+  def : SME_3_Op_Imm_Pat<nxv8f16, !if(is_col, int_aarch64_sme_mova_vec_col, int_aarch64_sme_mova_vec_row), nxv8i1, mxv64f16, i32, sme_elm_idx0_7, !cast<Instruction>(NAME # _H)>;
+  def : SME_3_Op_Imm_Pat<nxv8bf16, !if(is_col, int_aarch64_sme_mova_vec_col, int_aarch64_sme_mova_vec_row), nxv8i1, mxv64bf16, i32, sme_elm_idx0_7, !cast<Instruction>(NAME # _H)>;
   def : SME_3_Op_Imm_Pat<nxv4i32, !if(is_col, int_aarch64_sme_mova_vec_col, int_aarch64_sme_mova_vec_row), nxv4i1, mxv16i32, i32, sme_elm_idx0_3, !cast<Instruction>(NAME # _S)>;
   def : SME_3_Op_Imm_Pat<nxv4f32, !if(is_col, int_aarch64_sme_mova_vec_col, int_aarch64_sme_mova_vec_row), nxv4i1, mxv16f32, i32, sme_elm_idx0_3, !cast<Instruction>(NAME # _S)>;
   def : SME_3_Op_Imm_Pat<nxv2i64, !if(is_col, int_aarch64_sme_mova_vec_col, int_aarch64_sme_mova_vec_row), nxv2i1, mxv4i64,  i32, sme_elm_idx0_1, !cast<Instruction>(NAME # _D)>;

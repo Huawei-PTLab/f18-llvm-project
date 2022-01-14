@@ -178,6 +178,8 @@ std::string EVT::getEVTString() const {
   case MVT::mxv16i32:  return "mxv16i32";
   case MVT::mxv4i64:   return "mxv4i64";
   case MVT::mxv1i128:  return "mxv1i128";
+  case MVT::mxv64bf16: return "mxv64bf16";
+  case MVT::mxv64f16:  return "mxv64f16";
   case MVT::mxv16f32:  return "mxv16f32";
   case MVT::mxv4f64:   return "mxv4f64";
   }
@@ -540,6 +542,10 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
     return ScalableMatrixType::get(Type::getInt64Ty(Context), 4);
   case MVT::mxv1i128:
     return ScalableMatrixType::get(Type::getInt128Ty(Context), 1);
+  case MVT::mxv64bf16:
+    return ScalableMatrixType::get(Type::getBFloatTy(Context), 64);
+  case MVT::mxv64f16:
+    return ScalableMatrixType::get(Type::getHalfTy(Context), 64);
   case MVT::mxv16f32:
     return ScalableMatrixType::get(Type::getFloatTy(Context), 16);
   case MVT::mxv4f64:

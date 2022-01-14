@@ -90,7 +90,7 @@ def CC_AArch64_AAPCS : CallingConv<[
   CCIfType<[mxv256i8],
            CCAssignToReg<[ZAB0]>>,
 
-  CCIfType<[mxv64i16],
+  CCIfType<[mxv64i16, mxv64f16, mxv64bf16],
            CCAssignToReg<[ZAH0, ZAH1]>>,
 
   CCIfType<[mxv16i32, mxv16f32],
@@ -171,7 +171,7 @@ def RetCC_AArch64_AAPCS : CallingConv<[
   CCIfType<[mxv256i8],
            CCAssignToReg<[ZAB0]>>,
 
-  CCIfType<[mxv64i16],
+  CCIfType<[mxv64i16, mxv64f16, mxv64bf16],
            CCAssignToReg<[ZAH0, ZAH1]>>,
 
   CCIfType<[mxv16i32, mxv16f32],
