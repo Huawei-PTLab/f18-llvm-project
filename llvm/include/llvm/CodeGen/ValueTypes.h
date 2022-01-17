@@ -132,7 +132,7 @@ namespace llvm {
     /// Test if the given EVT has zero size, this will fail if called on a
     /// scalable type
     bool isZeroSized() const {
-      return !isScalableVector() && getSizeInBits() == 0;
+      return !isScalableVector() && !isScalableMatrix() && getSizeInBits() == 0;
     }
 
     /// Test if the given EVT is simple (as opposed to being extended).

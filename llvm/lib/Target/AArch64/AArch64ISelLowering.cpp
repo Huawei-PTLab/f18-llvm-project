@@ -12757,7 +12757,7 @@ bool AArch64TargetLowering::isLegalAddressingMode(const DataLayout &DL,
     return false;
 
   // FIXME: Update this method to support scalable addressing modes.
-  if (isa<ScalableVectorType>(Ty)) {
+  if (isa<ScalableVectorType>(Ty) || isa<ScalableMatrixType>(Ty)) {
     uint64_t VecElemNumBytes =
         DL.getTypeSizeInBits(cast<VectorType>(Ty)->getElementType()) / 8;
     return AM.HasBaseReg && !AM.BaseOffs &&
