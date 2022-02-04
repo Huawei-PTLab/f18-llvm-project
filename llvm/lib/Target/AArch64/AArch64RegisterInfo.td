@@ -1344,7 +1344,7 @@ class MatrixOperand<RegisterClass RC, int EltSize> : RegisterOperand<RC> {
   let PrintMethod = "printMatrix<" # EltSize # ">";
 }
 
-def MatrixOp : MatrixOperand<MPR, 0>;
+def MatrixOp : MatrixOperand<MPR8, 0>;
 
 class MatrixTileListAsmOperand : AsmOperandClass {
   let Name = "MatrixTileList";

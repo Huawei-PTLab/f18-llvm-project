@@ -87,6 +87,12 @@ defm ST1_MXIPXX : sme_mem_st_ss<"st1">;
 defm LDR_ZA : sme_fill<"ldr">;
 defm STR_ZA : sme_spill<"str">;
 
+def : Pat<(int_aarch64_sme_ldr MatrixOp:$ZAt, MatrixIndexGPR32Op12_15:$Rv, GPR64sp:$Rn),
+          (LDR_ZA MatrixOp:$ZAt, MatrixIndexGPR32Op12_15:$Rv, 0, GPR64sp:$Rn, 0)>;
+
+def : Pat<(int_aarch64_sme_str MatrixOp:$ZAt, MatrixIndexGPR32Op12_15:$Rv, GPR64sp:$Rn),
+          (STR_ZA MatrixOp:$ZAt, MatrixIndexGPR32Op12_15:$Rv, 0, GPR64sp:$Rn, 0)>;
+
 //===----------------------------------------------------------------------===//
 // Move instructions
 //===----------------------------------------------------------------------===//

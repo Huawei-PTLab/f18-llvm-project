@@ -415,6 +415,7 @@ class sme_spill_fill_inst<bit isStore, dag outs, dag ins, string opcodestr>
 
   let mayLoad = !not(isStore);
   let mayStore = isStore;
+  let Constraints = !if(!not(isStore), "$ZAt = $_ZAt", "");
 }
 
 multiclass sme_spill_fill<bit isStore, dag outs, dag ins, string opcodestr> {
@@ -435,7 +436,7 @@ multiclass sme_spill<string opcodestr> {
 
 multiclass sme_fill<string opcodestr> {
   defm NAME : sme_spill_fill<0b0, (outs MatrixOp:$ZAt),
-                             (ins MatrixIndexGPR32Op12_15:$Rv,
+                             (ins MatrixOp:$_ZAt, MatrixIndexGPR32Op12_15:$Rv,
                                   sme_elm_idx0_15:$imm4, GPR64sp:$Rn,
                                   imm0_15:$offset),
                              opcodestr>;

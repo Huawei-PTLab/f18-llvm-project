@@ -886,25 +886,26 @@ void AArch64InstPrinter::printMatrix(const MCInst *MI, unsigned OpNum,
                                      raw_ostream &O) {
   const MCOperand &RegOp = MI->getOperand(OpNum);
   assert(RegOp.isReg() && "Unexpected operand type!");
+  const char *Name = getRegisterName(RegOp.getReg());
 
-  O << getRegisterName(RegOp.getReg());
   switch (EltSize) {
   case 0:
+    O << "za";
     break;
   case 8:
-    O << ".b";
+    O << Name << ".b";
     break;
   case 16:
-    O << ".h";
+    O << Name << ".h";
     break;
   case 32:
-    O << ".s";
+    O << Name << ".s";
     break;
   case 64:
-    O << ".d";
+    O << Name << ".d";
     break;
   case 128:
-    O << ".q";
+    O << Name << ".q";
     break;
   default:
     llvm_unreachable("Unsupported element size");

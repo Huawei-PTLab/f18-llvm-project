@@ -3129,7 +3129,7 @@ AArch64AsmParser::tryParseMatrixRegister(OperandVector &Operands) {
   if (Name.equals_insensitive("za")) {
     Lex(); // eat "za"
     Operands.push_back(AArch64Operand::CreateMatrixRegister(
-        AArch64::ZA, /*ElementWidth=*/0, MatrixKind::Array, S, getLoc(),
+        AArch64::ZAB0, /*ElementWidth=*/0, MatrixKind::Array, S, getLoc(),
         getContext()));
     if (getLexer().is(AsmToken::LBrac)) {
       // There's no comma after matrix operand, so we can parse the next operand
