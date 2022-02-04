@@ -1547,7 +1547,9 @@ class SME_1VectorArg_2Pred_Instrinsic
                 ],
                 [IntrNoMem]>;
 
-class SME_OuterProduct_Intrinsic
+// This intrinsic intentionally avoids enforcing vector width == matrix width,
+// in order to handle widening matrix outer product instructions.
+class SME_2VectorArg_Pred_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anymatrix_ty],
                 [
                   LLVMScalarOrSameVectorWidth<1, llvm_i1_ty>,
@@ -2587,8 +2589,17 @@ def int_aarch64_sve_bfmlalt_lane : SVE_4Vec_BF16_Indexed;
 
 def int_aarch64_sme_addha : SME_1VectorArg_2Pred_Instrinsic;
 def int_aarch64_sme_addva : SME_1VectorArg_2Pred_Instrinsic;
-def int_aarch64_sme_fmopa : SME_OuterProduct_Intrinsic;
-def int_aarch64_sme_fmops : SME_OuterProduct_Intrinsic;
+
+def int_aarch64_sme_fmopa  : SME_2VectorArg_Pred_Intrinsic;
+def int_aarch64_sme_fmops  : SME_2VectorArg_Pred_Intrinsic;
+def int_aarch64_sme_smopa  : SME_2VectorArg_Pred_Intrinsic;
+def int_aarch64_sme_smops  : SME_2VectorArg_Pred_Intrinsic;
+def int_aarch64_sme_sumopa : SME_2VectorArg_Pred_Intrinsic;
+def int_aarch64_sme_sumops : SME_2VectorArg_Pred_Intrinsic;
+def int_aarch64_sme_usmopa : SME_2VectorArg_Pred_Intrinsic;
+def int_aarch64_sme_usmops : SME_2VectorArg_Pred_Intrinsic;
+def int_aarch64_sme_umopa  : SME_2VectorArg_Pred_Intrinsic;
+def int_aarch64_sme_umops  : SME_2VectorArg_Pred_Intrinsic;
 
 }
 

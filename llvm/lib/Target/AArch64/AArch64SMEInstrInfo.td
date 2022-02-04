@@ -35,41 +35,41 @@ let Predicates = [HasSME] in {
 // Outer products
 //===----------------------------------------------------------------------===//
 
-defm BFMOPA_MPPZZ  : sme_bf16_outer_product<0b0, "bfmopa">;
-defm BFMOPS_MPPZZ  : sme_bf16_outer_product<0b1, "bfmops">;
+defm BFMOPA_MPPZZ  : sme_bf16_outer_product<0b0, "bfmopa", int_aarch64_sme_fmopa>;
+defm BFMOPS_MPPZZ  : sme_bf16_outer_product<0b1, "bfmops", int_aarch64_sme_fmops>;
 
-def FMOPA_MPPZZ_S : sme_outer_product_fp32<0b0, "fmopa">;
-def FMOPS_MPPZZ_S : sme_outer_product_fp32<0b1, "fmops">;
+defm FMOPA_MPPZZ_S : sme_outer_product_fp32<0b0, "fmopa", int_aarch64_sme_fmopa>;
+defm FMOPS_MPPZZ_S : sme_outer_product_fp32<0b1, "fmops", int_aarch64_sme_fmops>;
 }
 
 let Predicates = [HasSMEF64] in {
-def FMOPA_MPPZZ_D : sme_outer_product_fp64<0b0, "fmopa">;
-def FMOPS_MPPZZ_D : sme_outer_product_fp64<0b1, "fmops">;
+defm FMOPA_MPPZZ_D : sme_outer_product_fp64<0b0, "fmopa", int_aarch64_sme_fmopa>;
+defm FMOPS_MPPZZ_D : sme_outer_product_fp64<0b1, "fmops", int_aarch64_sme_fmops>;
 }
 
 let Predicates = [HasSME] in {
-defm FMOPAL_MPPZZ  : sme_f16_outer_product<0b0, "fmopa">;
-defm FMOPSL_MPPZZ  : sme_f16_outer_product<0b1, "fmops">;
+defm FMOPAL_MPPZZ  : sme_f16_outer_product<0b0, "fmopa", int_aarch64_sme_fmopa>;
+defm FMOPSL_MPPZZ  : sme_f16_outer_product<0b1, "fmops", int_aarch64_sme_fmops>;
 
-def SMOPA_MPPZZ_S  : sme_int_outer_product_i32<0b000, "smopa">;
-def SMOPS_MPPZZ_S  : sme_int_outer_product_i32<0b001, "smops">;
-def UMOPA_MPPZZ_S  : sme_int_outer_product_i32<0b110, "umopa">;
-def UMOPS_MPPZZ_S  : sme_int_outer_product_i32<0b111, "umops">;
-def SUMOPA_MPPZZ_S : sme_int_outer_product_i32<0b010, "sumopa">;
-def SUMOPS_MPPZZ_S : sme_int_outer_product_i32<0b011, "sumops">;
-def USMOPA_MPPZZ_S : sme_int_outer_product_i32<0b100, "usmopa">;
-def USMOPS_MPPZZ_S : sme_int_outer_product_i32<0b101, "usmops">;
+defm SMOPA_MPPZZ_S  : sme_int_outer_product_i32<0b000, "smopa", int_aarch64_sme_smopa>;
+defm SMOPS_MPPZZ_S  : sme_int_outer_product_i32<0b001, "smops", int_aarch64_sme_smops>;
+defm UMOPA_MPPZZ_S  : sme_int_outer_product_i32<0b110, "umopa", int_aarch64_sme_umopa>;
+defm UMOPS_MPPZZ_S  : sme_int_outer_product_i32<0b111, "umops", int_aarch64_sme_umops>;
+defm SUMOPA_MPPZZ_S : sme_int_outer_product_i32<0b010, "sumopa", int_aarch64_sme_sumopa>;
+defm SUMOPS_MPPZZ_S : sme_int_outer_product_i32<0b011, "sumops", int_aarch64_sme_sumops>;
+defm USMOPA_MPPZZ_S : sme_int_outer_product_i32<0b100, "usmopa", int_aarch64_sme_usmopa>;
+defm USMOPS_MPPZZ_S : sme_int_outer_product_i32<0b101, "usmops", int_aarch64_sme_usmops>;
 }
 
 let Predicates = [HasSMEI64] in {
-def SMOPA_MPPZZ_D  : sme_int_outer_product_i64<0b000, "smopa">;
-def SMOPS_MPPZZ_D  : sme_int_outer_product_i64<0b001, "smops">;
-def UMOPA_MPPZZ_D  : sme_int_outer_product_i64<0b110, "umopa">;
-def UMOPS_MPPZZ_D  : sme_int_outer_product_i64<0b111, "umops">;
-def SUMOPA_MPPZZ_D : sme_int_outer_product_i64<0b010, "sumopa">;
-def SUMOPS_MPPZZ_D : sme_int_outer_product_i64<0b011, "sumops">;
-def USMOPA_MPPZZ_D : sme_int_outer_product_i64<0b100, "usmopa">;
-def USMOPS_MPPZZ_D : sme_int_outer_product_i64<0b101, "usmops">;
+defm SMOPA_MPPZZ_D  : sme_int_outer_product_i64<0b000, "smopa", int_aarch64_sme_smopa>;
+defm SMOPS_MPPZZ_D  : sme_int_outer_product_i64<0b001, "smops", int_aarch64_sme_smops>;
+defm UMOPA_MPPZZ_D  : sme_int_outer_product_i64<0b110, "umopa", int_aarch64_sme_umopa>;
+defm UMOPS_MPPZZ_D  : sme_int_outer_product_i64<0b111, "umops", int_aarch64_sme_umops>;
+defm SUMOPA_MPPZZ_D : sme_int_outer_product_i64<0b010, "sumopa", int_aarch64_sme_sumopa>;
+defm SUMOPS_MPPZZ_D : sme_int_outer_product_i64<0b011, "sumops", int_aarch64_sme_sumops>;
+defm USMOPA_MPPZZ_D : sme_int_outer_product_i64<0b100, "usmopa", int_aarch64_sme_usmopa>;
+defm USMOPS_MPPZZ_D : sme_int_outer_product_i64<0b101, "usmops", int_aarch64_sme_usmops>;
 }
 
 let Predicates = [HasSME] in {
