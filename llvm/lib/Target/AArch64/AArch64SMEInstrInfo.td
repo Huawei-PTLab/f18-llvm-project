@@ -106,6 +106,15 @@ defm EXTRACT_ZPMXI : sme_tile_to_vector<"mova">;
 
 defm ZERO_M : sme_zero<"zero">;
 
+def : Pat<(mxv256i8 (int_aarch64_sme_zero)), (ZERO_M)>;
+def : Pat<(mxv64i16 (int_aarch64_sme_zero)), (ZERO_M)>;
+def : Pat<(mxv64f16 (int_aarch64_sme_zero)), (ZERO_M)>;
+def : Pat<(mxv64bf16 (int_aarch64_sme_zero)), (ZERO_M)>;
+def : Pat<(mxv16f32 (int_aarch64_sme_zero)), (ZERO_M)>;
+def : Pat<(mxv16i32 (int_aarch64_sme_zero)), (ZERO_M)>;
+def : Pat<(mxv4i64 (int_aarch64_sme_zero)), (ZERO_M)>;
+def : Pat<(mxv4f64 (int_aarch64_sme_zero)), (ZERO_M)>;
+
 //===----------------------------------------------------------------------===//
 // Mode selection and state access instructions
 //===----------------------------------------------------------------------===//
