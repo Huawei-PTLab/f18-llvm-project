@@ -126,7 +126,7 @@ multiclass sme_f16_outer_product<bit S, string mnemonic> {
 class sme_add_vector_to_tile_inst<bit op, bit V, MatrixTileOperand tile_ty,
                                   ZPRRegOp zpr_ty, string mnemonic>
     : I<(outs tile_ty:$ZAda),
-        (ins PPR3bAny:$Pn, PPR3bAny:$Pm, zpr_ty:$Zn),
+        (ins PPR3bAny:$Pn, PPR3bAny:$Pm, tile_ty:$_ZAda, zpr_ty:$Zn),
         mnemonic, "\t$ZAda, $Pn/m, $Pm/m, $Zn",
         "", []>, Sched<[]> {
   bits<3> Pm;
@@ -140,6 +140,8 @@ class sme_add_vector_to_tile_inst<bit op, bit V, MatrixTileOperand tile_ty,
   let Inst{12-10} = Pn;
   let Inst{9-5}   = Zn;
   let Inst{4-3}   = 0b00;
+
+  let Constraints = "$ZAda = $_ZAda";
 }
 
 class sme_add_vector_to_tile_u32<bit V, string mnemonic>

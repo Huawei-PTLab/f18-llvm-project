@@ -1540,10 +1540,10 @@ class SVE_4Vec_BF16_Indexed
 class SME_1VectorArg_2Pred_Instrinsic
     : DefaultAttrsIntrinsic<[llvm_anymatrix_ty],
                 [
-                  LLVMMatrixPredicate<0>,
-                  LLVMMatrixPredicate<0>,
+                  LLVMScalarOrSameVectorWidth<1, llvm_i1_ty>,
+                  LLVMScalarOrSameVectorWidth<1, llvm_i1_ty>,
                   LLVMMatchType<0>,
-                  LLVMMatrixVector<0>
+                  llvm_anyvector_ty
                 ],
                 [IntrNoMem]>;
 

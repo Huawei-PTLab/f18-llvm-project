@@ -17,11 +17,17 @@
 let Predicates = [HasSME] in {
 def ADDHA_MPPZ_S : sme_add_vector_to_tile_u32<0b0, "addha">;
 def ADDVA_MPPZ_S : sme_add_vector_to_tile_u32<0b1, "addva">;
+
+def : SVE_4_Op_Pat<mxv16i32, int_aarch64_sme_addha, nxv4i1, nxv4i1, mxv16i32, nxv4i32, !cast<Instruction>(ADDHA_MPPZ_S)>;
+def : SVE_4_Op_Pat<mxv16i32, int_aarch64_sme_addva, nxv4i1, nxv4i1, mxv16i32, nxv4i32, !cast<Instruction>(ADDVA_MPPZ_S)>;
 }
 
 let Predicates = [HasSMEI64] in {
 def ADDHA_MPPZ_D : sme_add_vector_to_tile_u64<0b0, "addha">;
 def ADDVA_MPPZ_D : sme_add_vector_to_tile_u64<0b1, "addva">;
+
+def : SVE_4_Op_Pat<mxv4i64, int_aarch64_sme_addha, nxv2i1, nxv2i1, mxv4i64, nxv2i64, !cast<Instruction>(ADDHA_MPPZ_D)>;
+def : SVE_4_Op_Pat<mxv4i64, int_aarch64_sme_addva, nxv2i1, nxv2i1, mxv4i64, nxv2i64, !cast<Instruction>(ADDVA_MPPZ_D)>;
 }
 
 let Predicates = [HasSME] in {
