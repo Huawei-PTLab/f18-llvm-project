@@ -8746,11 +8746,11 @@ CodeGenFunction::EmitSMEIntrinsicWithOffset(SVETypeFlags TypeFlags,
   Ops[0] = EmitSMEPredicateCast(Ops[0], ResultTy);
   // While the ACLE does not currently accept an offset, the LLVM intrinsic
   // still expects an offset as argument at ArgNo. So, we pass 0 of the
-  // llvm_i32_ty type.
+  // llvm_i64_ty type.
   if (Ops.size() == ArgNo)
-    Ops.push_back(ConstantInt::get(Int32Ty, 0));
+    Ops.push_back(ConstantInt::get(Int64Ty, 0));
   else
-    Ops.insert(&Ops[ArgNo], ConstantInt::get(Int32Ty, 0));
+    Ops.insert(&Ops[ArgNo], ConstantInt::get(Int64Ty, 0));
   Function *F =
       CGM.getIntrinsic(IntID, getSMEOverloadTypes(TypeFlags, ResultTy, Ops));
   return Builder.CreateCall(F, Ops);
