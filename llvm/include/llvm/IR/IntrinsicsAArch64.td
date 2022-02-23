@@ -1567,7 +1567,7 @@ class SME_Load_Intrinsic
                   LLVMMatrixPredicate<0>, // Pg
                   LLVMMatchType<0>,       // Matrix
                   llvm_i32_ty,            // Wv
-                  llvm_i32_ty,            // Offset
+                  llvm_i64_ty,            // Offset
                   LLVMPointerToElt<0>     // [Xn, Xm, LSL #Imm]
                 ],
                 [IntrReadMem, IntrArgMemOnly]>;
@@ -1578,7 +1578,7 @@ class SME_Store_Intrinsic
                   LLVMMatrixPredicate<0>, // Pg
                   llvm_anymatrix_ty,      // Matrix
                   llvm_i32_ty,            // Wv
-                  llvm_i32_ty,            // Offset
+                  llvm_i64_ty,            // Offset
                   LLVMPointerToElt<0>     // [Xn, Xm, LSL #Imm]
                 ],
                 [IntrWriteMem, IntrArgMemOnly, NoCapture<ArgIndex<4>>]>;

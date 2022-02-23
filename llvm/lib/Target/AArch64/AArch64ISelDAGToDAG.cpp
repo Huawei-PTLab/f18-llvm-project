@@ -1529,10 +1529,10 @@ void AArch64DAGToDAGISel::SelectPredicatedMatrixLoad(SDNode *N, unsigned Opc) {
 
   // Extend the immediate part of the vector selector to i64 for encoding.
   SDValue Imm = N->getOperand(5);
-  assert(Imm.getValueType().getSimpleVT().SimpleTy == MVT::i32);
+  assert(Imm.getValueType().getSimpleVT().SimpleTy == MVT::i64);
   assert((VT != MVT::mxv1i128 || N->getConstantOperandVal(5) == 0) &&
          "Unexpected row/column stride in 128-bit SME load");
-  Imm = CurDAG->getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Imm);
+  Imm = CurDAG->getTargetConstant(N->getConstantOperandVal(5), DL, MVT::i64);
 
   // Fit the address operand into the am_sve_regreg_lsl* addressing mode.
   unsigned Scale = 0;
@@ -1616,10 +1616,10 @@ void AArch64DAGToDAGISel::SelectPredicatedMatrixStore(SDNode *N, unsigned Opc) {
 
   // Extend the immediate part of the vector selector to i64 for encoding.
   SDValue Imm = N->getOperand(5);
-  assert(Imm.getValueType().getSimpleVT().SimpleTy == MVT::i32);
+  assert(Imm.getValueType().getSimpleVT().SimpleTy == MVT::i64);
   assert((VT != MVT::mxv1i128 || N->getConstantOperandVal(5) == 0) &&
          "Unexpected row/column stride in 128-bit SME load");
-  Imm = CurDAG->getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Imm);
+  Imm = CurDAG->getTargetConstant(N->getConstantOperandVal(5), DL, MVT::i64);
 
   // Fit the address operand into the am_sve_regreg_lsl* addressing mode.
   unsigned Scale = 0;
